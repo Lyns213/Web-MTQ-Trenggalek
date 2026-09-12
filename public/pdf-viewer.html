@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewer Dokumen</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #1a1a1a; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  #toolbar { position: relative; z-index: 10; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 10px; background: #2d2d2d; color: #fff; flex-shrink: 0; }
+  #toolbar button { background: #4b5563; border: 0; color: #fff; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; line-height: 1.2; }
+  #toolbar button:hover { background: #6b7280; }
+  #toolbar button:disabled { opacity: .4; cursor: default; }
+  #pageInfo, #zoomInfo { font-size: 13px; margin: 0 4px; min-width: 52px; text-align: center; white-space: nowrap; }
+  .spacer { flex: 1; }
+  #scroller { overflow: auto; flex: 1; background: #404040; }
+  #container { display: flex; flex-direction: column; align-items: center; padding: 8px 0; }
+  .page-wrap { background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.6); margin-bottom: 8px; }
+  .page-wrap canvas { display: block; }
+  #loading, #error { color: #e5e7eb; padding: 24px; text-align: center; font-size: 14px; }
+  #error { color: #fca5a5; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <button id="btnPrev" title="Halaman sebelumnya">‹</button>
+  <span id="pageInfo">– / –</span>
+  <button id="btnNext" title="Halaman berikutnya">›</button>
+  <span class="spacer"></span>
+  <button id="btnFull" title="Tampilkan penuh satu layar (Esc untuk keluar)">⛶ Penuh</button>
+  <button id="btnZoomOut" title="Perkecil">−</button>
+  <span id="zoomInfo">100%</span>
+  <button id="btnZoomIn" title="Perbesar">+</button>
+  <button id="btnFit" title="Sesuaikan lebar layar">Lebar</button>
+  <button id="btnRotate" title="Putar searah jarum jam">↻</button>
+  <button id="btnDownload" title="Unduh">⭳</button>
+</div>
+<div id="loading">Memuat dokumen…</div>
+<div id="error" class="hidden"></div>
+<div id="scroller"><div id="container"></div></div>
+
+<script type="module">
+import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+
+const file = new URLSearchParams(location.search).get('file') || '';
+const scroller = document.getElementById('scroller');
+const container = document.getElementById('container');
+let pdfDoc = null, pageCount = 0, currentPage = 1, zoomFactor = 1, rotationOffset = 0;
+let renderTasks = [];
+let pageWidths = [];
+
+function showError(msg) {
+  document.getElementById('loading').classList.add('hidden');
+  const el = document.getElementById('error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function clearPages() {
+  renderTasks.forEach(t => { try { t.cancel(); } catch (_) {} });
+  renderTasks = [];
+  container.innerHTML = '';
+}
+
+function updateUI() {
+  document.getElementById('pageInfo').textContent = pageCount ? (currentPage + ' / ' + pageCount) : '– / –';
+  document.getElementById('btnPrev').disabled = currentPage <= 1;
+  document.getElementById('btnNext').disabled = currentPage >= pageCount;
+  document.getElementById('zoomInfo').textContent = Math.round(zoomFactor * 100) + '%';
+}
+
+async function renderAll() {
+  if (!pdfDoc) return;
+  clearPages();
+  // gunakan window.innerWidth langsung — pasti selebar iframe/viewer
+  const avail = Math.max(200, window.innerWidth - 8);
+  const widest = Math.max(...pageWidths);
+  const base = avail / widest; // selebar layar, tanpa batas atas
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await pdfDoc.getPage(i);
+    const scale = base * zoomFactor;
+    const vp = page.getViewport({ scale, rotation: rotationOffset });
+    const wrap = document.createElement('div');
+    wrap.className = 'page-wrap';
+    wrap.id = 'page-' + i;
+    const canvas = document.createElement('canvas');
+    const cssW = Math.round(vp.width);
+    const cssH = Math.round(vp.height);
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    wrap.appendChild(canvas);
+    container.appendChild(wrap);
+    const rv = page.getViewport({ scale: scale * dpr, rotation: rotationOffset });
+    const task = page.render({ canvasContext: canvas.getContext('2d'), viewport: rv });
+    renderTasks.push(task);
+    await task.promise;
+  }
+  updateUI();
+}
+
+async function load() {
+  if (!file) { showError('Parameter file tidak ditemukan.'); return; }
+  try {
+    pdfDoc = await pdfjsLib.getDocument({ url: file }).promise;
+    pageCount = pdfDoc.numPages;
+    pageWidths = [];
+    for (let i = 1; i <= pageCount; i++) {
+      const p = await pdfDoc.getPage(i);
+      pageWidths.push(p.getViewport({ scale: 1, rotation: 0 }).width);
+    }
+    document.getElementById('loading').classList.add('hidden');
+    await renderAll();
+  } catch (e) {
+    showError('Gagal memuat dokumen: ' + e.message);
+  }
+}
+
+function goTo(p) {
+  currentPage = Math.min(Math.max(1, p), pageCount);
+  const el = document.getElementById('page-' + currentPage);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  updateUI();
+}
+
+document.getElementById('btnPrev').addEventListener('click', () => goTo(currentPage - 1));
+document.getElementById('btnNext').addEventListener('click', () => goTo(currentPage + 1));
+document.getElementById('btnZoomIn').addEventListener('click', () => { zoomFactor = Math.min(8, zoomFactor * 1.25); renderAll(); });
+document.getElementById('btnZoomOut').addEventListener('click', () => { zoomFactor = Math.max(0.2, zoomFactor / 1.25); renderAll(); });
+document.getElementById('btnFit').addEventListener('click', () => { zoomFactor = 1; renderAll(); });
+document.getElementById('btnRotate').addEventListener('click', () => { rotationOffset = (rotationOffset + 90) % 360; renderAll(); });
+document.getElementById('btnDownload').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = file;
+  a.download = file.split('/').pop() || 'dokumen.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+
+// Tombol "Penuh" — minta iframe tampil full satu layar (harus user gesture)
+const btnFull = document.getElementById('btnFull');
+function getFsElement() {
+  // Beri prioritas requestFullscreen pada elemen document supaya seluruh viewer (toolbar+scroller) ikut penuh
+  return document.documentElement;
+}
+btnFull.addEventListener('click', () => {
+  const fsEl = getFsElement();
+  if (!document.fullscreenElement) {
+    const p = fsEl.requestFullscreen ? fsEl.requestFullscreen()
+      : fsEl.webkitRequestFullscreen ? fsEl.webkitRequestFullscreen()
+      : fsEl.msRequestFullscreen ? fsEl.msRequestFullscreen() : null;
+    if (p && p.catch) p.catch(() => showError('Izin penuh layar ditolak browser.'));
+  } else {
+    const ex = document.exitFullscreen ? document.exitFullscreen()
+      : document.webkitExitFullscreen ? document.webkitExitFullscreen()
+      : document.msExitFullscreen ? document.msExitFullscreen() : null;
+    if (ex && ex.catch) ex.catch(() => {});
+  }
+});
+// Sembunyikan tombol "Penuh" jika browser tak mendukung fullscreen iframe
+if (!('requestFullscreen' in document.documentElement) && !('webkitRequestFullscreen' in document.documentElement)) {
+  btnFull.style.display = 'none';
+}
+document.addEventListener('fullscreenchange', () => {
+  btnFull.textContent = document.fullscreenElement ? '✕ Tutup' : '⛶ Penuh';
+});
+
+let rt;
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(renderAll, 200); });
+
+load();
+</script>
+</body>
+</html>

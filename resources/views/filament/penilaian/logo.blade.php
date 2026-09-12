@@ -1,0 +1,38 @@
+@if(Auth::check())
+    <div style="display: flex; align-items: center; gap: 14px; padding: 4px 0;">
+        <div style="display: flex; align-items: center;">
+            <img src="{{ asset('images/logo_trenggalek.png') }}" alt="Trenggalek" style="height: 42px; width: auto; object-fit: contain;">
+        </div>
+        <div style="display: flex; flex-direction: column; text-align: left; line-height: 1.2;">
+            <span style="font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: #e5b958; text-transform: uppercase;">
+                MTQ KABUPATEN TRENGGALEK 2026
+            </span>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px;">
+                <span style="font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase;">
+                    DEWAN HAKIM &bull; CABANG {{ strtoupper(Auth::user()->name) }}
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); letter-spacing: 1px;">
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #34d399;"></span> AKTIF
+                </span>
+            </div>
+        </div>
+    </div>
+@else
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; margin: 0 auto;">
+        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+            <img src="{{ asset('images/logo_trenggalek.png') }}" alt="Trenggalek" style="height: 68px !important; width: auto; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.6));">
+        </div>
+        <h2 style="font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: 2px; color: #e5b958; text-transform: uppercase; margin: 0; text-shadow: 0 2px 6px rgba(0,0,0,0.4);">
+            MUSABAQAH TILAWATIL QUR'AN
+        </h2>
+        <h1 style="font-family: 'Montserrat', sans-serif; font-size: 19px; font-weight: 900; letter-spacing: 1.2px; color: #ffffff; text-transform: uppercase; margin: 4px 0 8px 0; text-shadow: 0 2px 8px rgba(0,0,0,0.5);">
+            KABUPATEN TRENGGALEK 2026
+        </h1>
+        <div style="display: inline-flex; align-items: center; gap: 7px; padding: 5px 16px; border-radius: 20px; background: rgba(229, 185, 88, 0.12); border: 1px solid rgba(229, 185, 88, 0.35); margin-bottom: 8px;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+            <span style="font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 800; color: #ffe082; letter-spacing: 1.5px; text-transform: uppercase;">
+                PORTAL RESMI PENILAIAN
+            </span>
+        </div>
+    </div>
+@endif
