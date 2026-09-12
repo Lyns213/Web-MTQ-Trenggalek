@@ -29,8 +29,8 @@
 
         {{-- Action Buttons --}}
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            @if(stripos($cabangLabel, 'tartil') !== false)
-            <a href="/live-tartil" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(229, 57, 53, 0.15); border: 1.5px solid #e53935; color: #ffffff; padding: 10px 18px; border-radius: 10px; font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='#e53935'; this.style.boxShadow='0 0 16px rgba(229, 57, 53, 0.6)'" onmouseout="this.style.background='rgba(229, 57, 53, 0.15)'; this.style.boxShadow='none'">
+            @if(!empty($cabangSlug))
+            <a href="/live/{{ $cabangSlug }}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(229, 57, 53, 0.15); border: 1.5px solid #e53935; color: #ffffff; padding: 10px 18px; border-radius: 10px; font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='#e53935'; this.style.boxShadow='0 0 16px rgba(229, 57, 53, 0.6)'" onmouseout="this.style.background='rgba(229, 57, 53, 0.15)'; this.style.boxShadow='none'">
                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #ff4d4d; box-shadow: 0 0 8px #ff4d4d;"></span>
                 Layar Live Score
             </a>

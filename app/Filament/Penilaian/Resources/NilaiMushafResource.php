@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use App\Filament\Penilaian\Concerns\HasLiveScoreActions;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Notification;
@@ -134,6 +135,7 @@ class NilaiMushafResource extends Resource
                 TextColumn::make('keindahan_khat'),
                 TextColumn::make('keindahan_hiasan_dan_lukisan'),
                 TextColumn::make('total'),
+                HasLiveScoreActions::getTimerTableColumn('mushaf'),
             ])
             ->defaultSort('final_bobot', 'desc')
             ->filters([
@@ -160,6 +162,7 @@ class NilaiMushafResource extends Resource
                     }),
             ])
             ->headerActions([
+                HasLiveScoreActions::getLiveScoreHeaderAction('mushaf'),
                 // ExportAction::make()
                 //     ->label(__('Download Excel'))
                 //     ->color('success')
@@ -171,7 +174,10 @@ class NilaiMushafResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Input Nilai')
+                    ->label('')
+                    ->tooltip('Input Nilai')
+                    ->icon('heroicon-o-plus')
+                    ->color('success')
                     ->after(function ($data, $record) {
                         $record->bobot_total = $record->total * 100000000;
                         $record->bobot_kebenaran_kaidah_khat = $record->kebenaran_kaidah_khat * 1000000;
@@ -188,12 +194,17 @@ class NilaiMushafResource extends Resource
                         $record->keindahan_hiasan_dan_lukisan != 0 && $record->keindahan_hiasan_dan_lukisan != null
                     ),
                 Tables\Actions\ViewAction::make()
-                    ->label('Lihat Nilai')
+                    ->label('')
+                    ->tooltip('Lihat Nilai')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
                     ->hidden(fn ($record): bool => $record->total == 0 || $record->total == null ||
                         $record->kebenaran_kaidah_khat == 0 || $record->kebenaran_kaidah_khat == null ||
                         $record->keindahan_khat == 0 || $record->keindahan_khat == null ||
                         $record->keindahan_hiasan_dan_lukisan == 0 || $record->keindahan_hiasan_dan_lukisan == null),
+                ...HasLiveScoreActions::getLiveScoreTableActions('mushaf'),
             ])
+            ->recordClasses(HasLiveScoreActions::getRecordClasses('mushaf'))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     // Tables\Actions\DeleteBulkAction::make(),

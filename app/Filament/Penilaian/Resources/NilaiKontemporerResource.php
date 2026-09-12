@@ -17,6 +17,7 @@ use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use App\Filament\Penilaian\Concerns\HasLiveScoreActions;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -135,6 +136,7 @@ class NilaiKontemporerResource extends Resource
                 TextColumn::make('unsur_seni_rupa'),
                 TextColumn::make('sentuhan_akhir'),
                 TextColumn::make('total'),
+                HasLiveScoreActions::getTimerTableColumn('kontemporer'),
             ])
             ->defaultSort('final_bobot', 'desc')
             ->filters([
@@ -161,6 +163,7 @@ class NilaiKontemporerResource extends Resource
                     }),
             ])
             ->headerActions([
+                HasLiveScoreActions::getLiveScoreHeaderAction('kontemporer'),
                 // ExportAction::make()
                 //     ->label(__('Download Excel'))
                 //     ->color('success')
@@ -172,7 +175,10 @@ class NilaiKontemporerResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Input Nilai')
+                    ->label('')
+                    ->tooltip('Input Nilai')
+                    ->icon('heroicon-o-plus')
+                    ->color('success')
                     ->after(function ($data, $record) {
                         $record->bobot_total = $record->total * 100000000;
                         $record->bobot_unsur_kaligrafi = $record->unsur_kaligrafi * 1000000;
@@ -189,12 +195,17 @@ class NilaiKontemporerResource extends Resource
                         $record->sentuhan_akhir != 0 && $record->sentuhan_akhir != null
                     ),
                 Tables\Actions\ViewAction::make()
-                    ->label('Lihat Nilai')
+                    ->label('')
+                    ->tooltip('Lihat Nilai')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
                     ->hidden(fn ($record): bool => $record->total == 0 || $record->total == null ||
                         $record->unsur_kaligrafi == 0 || $record->unsur_kaligrafi == null ||
                         $record->unsur_seni_rupa == 0 || $record->unsur_seni_rupa == null ||
                         $record->sentuhan_akhir == 0 || $record->sentuhan_akhir == null),
+                ...HasLiveScoreActions::getLiveScoreTableActions('kontemporer'),
             ])
+            ->recordClasses(HasLiveScoreActions::getRecordClasses('kontemporer'))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     // Tables\Actions\DeleteBulkAction::make(),

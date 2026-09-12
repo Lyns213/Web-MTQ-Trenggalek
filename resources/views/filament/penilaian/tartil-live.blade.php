@@ -1,13 +1,9 @@
 @php
     $curr = $initialData['current'] ?? null;
     $timer = $initialData['timer'] ?? null;
-    $tajwid = (float)($curr['tajwid'] ?? 0);
-    $irama = (float)($curr['irama_dan_suara'] ?? 0);
-    $fashahah = (float)($curr['fashahah'] ?? 0);
-    $total = (float)($curr['total'] ?? ($tajwid + $irama + $fashahah));
-    $tajwidPct = min(100, max(0, ($tajwid / 40) * 100));
-    $iramaPct = min(100, max(0, ($irama / 30) * 100));
-    $fashahahPct = min(100, max(0, ($fashahah / 30) * 100));
+    $total = (float)($curr['total'] ?? 0);
+    $fields = $curr['fields'] ?? [];
+    $slug = $slug ?? 'tartil';
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -466,37 +462,30 @@
             <span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG {{ $curr['cabang'] ?? 'TARTIL' }})</span>
         </div>
 
-        <!-- TAJWID -->
-        <div class="score-field">
-            <div class="score-field-top">
-                <span class="score-field-label">TAJWID</span>
-                <span class="score-field-num" id="sTajwid">{{ number_format($tajwid, 2) }}</span>
-            </div>
-            <div class="score-track">
-                <div class="score-fill" id="bTajwid" style="width: {{ $tajwidPct }}%;"></div>
-            </div>
-        </div>
-
-        <!-- IRAMA -->
-        <div class="score-field">
-            <div class="score-field-top">
-                <span class="score-field-label">IRAMA</span>
-                <span class="score-field-num" id="sIrama">{{ number_format($irama, 2) }}</span>
-            </div>
-            <div class="score-track">
-                <div class="score-fill" id="bIrama" style="width: {{ $iramaPct }}%;"></div>
-            </div>
-        </div>
-
-        <!-- FASAHAH -->
-        <div class="score-field">
-            <div class="score-field-top">
-                <span class="score-field-label">FASAHAH</span>
-                <span class="score-field-num" id="sFashahah">{{ number_format($fashahah, 2) }}</span>
-            </div>
-            <div class="score-track">
-                <div class="score-fill" id="bFashahah" style="width: {{ $fashahahPct }}%;"></div>
-            </div>
+        <div class="score-fields-container" id="scoreFieldsContainer" style="display: flex; flex-direction: column; justify-content: space-around; flex: 1; margin: 4px 0; gap: 4px;">
+            @if(!empty($fields))
+                @foreach($fields as $idx => $f)
+                <div class="score-field">
+                    <div class="score-field-top">
+                        <span class="score-field-label">{{ $f['label'] }}</span>
+                        <span class="score-field-num" id="sVal_{{ $idx }}">{{ number_format($f['value'], 2) }}</span>
+                    </div>
+                    <div class="score-track">
+                        <div class="score-fill" id="sBar_{{ $idx }}" style="width: {{ $f['pct'] }}%;"></div>
+                    </div>
+                </div>
+                @endforeach
+            @else
+                <div class="score-field">
+                    <div class="score-field-top">
+                        <span class="score-field-label">SKOR</span>
+                        <span class="score-field-num">{{ number_format($total, 2) }}</span>
+                    </div>
+                    <div class="score-track">
+                        <div class="score-fill" style="width: {{ min(100, $total) }}%;"></div>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <!-- TOTAL SKOR -->
@@ -518,6 +507,7 @@
 </div>
 
 <script>
+let currentSlug = '{{ $slug ?? "tartil" }}';
 let currentId = {{ $curr['id'] ?? 'null' }};
 let nextId = {{ $initialData['next']['id'] ?? 'null' }};
 let prevId = {{ $initialData['previous']['id'] ?? 'null' }};
@@ -570,19 +560,24 @@ function updateDisplay(data) {
         document.getElementById('cabangTitle').innerHTML = '<span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG ' + data.current.cabang + ')</span>';
     }
 
-    var t = parseFloat(data.current.tajwid) || 0;
-    var i = parseFloat(data.current.irama_dan_suara) || 0;
-    var f = parseFloat(data.current.fashahah) || 0;
-    var tot = parseFloat(data.current.total) || (t + i + f);
+    if (data.current.fields && data.current.fields.length > 0) {
+        var container = document.getElementById('scoreFieldsContainer');
+        var html = '';
+        data.current.fields.forEach(function(f, idx) {
+            html += '<div class="score-field">' +
+                '<div class="score-field-top">' +
+                    '<span class="score-field-label">' + f.label + '</span>' +
+                    '<span class="score-field-num" id="sVal_' + idx + '">' + Number(f.value).toFixed(2) + '</span>' +
+                '</div>' +
+                '<div class="score-track">' +
+                    '<div class="score-fill" id="sBar_' + idx + '" style="width: ' + f.pct + '%;"></div>' +
+                '</div>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+    }
 
-    document.getElementById('sTajwid').textContent = t.toFixed(2);
-    document.getElementById('sIrama').textContent = i.toFixed(2);
-    document.getElementById('sFashahah').textContent = f.toFixed(2);
-    document.getElementById('sTotal').textContent = tot.toFixed(2);
-
-    document.getElementById('bTajwid').style.width = Math.min(100, Math.max(0, (t / 40) * 100)) + '%';
-    document.getElementById('bIrama').style.width = Math.min(100, Math.max(0, (i / 30) * 100)) + '%';
-    document.getElementById('bFashahah').style.width = Math.min(100, Math.max(0, (f / 30) * 100)) + '%';
+    document.getElementById('sTotal').textContent = Number(data.current.total || 0).toFixed(2);
 }
 
 function tickTimer() {
@@ -592,7 +587,7 @@ function tickTimer() {
 }
 
 function fetchData() {
-    var url = '/live-tartil/data' + (currentId ? ('/' + currentId) : '');
+    var url = '/live/' + currentSlug + '/data' + (currentId ? ('/' + currentId) : '');
     fetch(url)
         .then(function(res) { return res.json(); })
         .then(function(data) {
@@ -610,21 +605,20 @@ function fetchData() {
 function navigateParticipant(direction) {
     var targetId = direction === 'next' ? nextId : prevId;
     if (targetId) {
-        currentId = targetId;
-        fetchData();
+        window.location.href = '/live/' + currentSlug + '/' + targetId;
     }
 }
 
 function toggleTimer() {
     if (!currentId) return;
     var action = srvRun ? 'pause' : 'start';
-    fetch('/live-tartil/timer/' + action + '?id=' + currentId)
+    fetch('/live/' + currentSlug + '/timer/' + action + '?id=' + currentId)
         .then(function() { fetchData(); });
 }
 
 function resetTimer() {
     if (!currentId) return;
-    fetch('/live-tartil/timer/reset?id=' + currentId)
+    fetch('/live/' + currentSlug + '/timer/reset?id=' + currentId)
         .then(function() { fetchData(); });
 }
 

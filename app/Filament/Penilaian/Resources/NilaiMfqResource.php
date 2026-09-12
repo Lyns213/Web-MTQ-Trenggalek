@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use App\Filament\Penilaian\Concerns\HasLiveScoreActions;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -53,6 +54,7 @@ class NilaiMfqResource extends Resource
                     ->label('Grup')
                     ->searchable(),
                 TextColumn::make('total'),
+                HasLiveScoreActions::getTimerTableColumn('mfq'),
             ])
             ->defaultSort('total', 'desc')
             ->filters([
@@ -79,6 +81,7 @@ class NilaiMfqResource extends Resource
                     }),
             ])
             ->headerActions([
+                HasLiveScoreActions::getLiveScoreHeaderAction('mfq'),
                 ExportAction::make()
                     ->label(__('Download Excel'))
                     ->color('success')
@@ -90,18 +93,26 @@ class NilaiMfqResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Input Nilai')
+                    ->label('')
+                    ->tooltip('Input Nilai')
+                    ->icon('heroicon-o-plus')
+                    ->color('success')
                     ->modalHeading('Input Nilai')
                     ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
                     ->hidden(
                         fn($record): bool => $record->total != 0 && $record->total != null
                     ),
                 Tables\Actions\ViewAction::make()
-                    ->label('Lihat Nilai')
+                    ->label('')
+                    ->tooltip('Lihat Nilai')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
                     ->hidden(
                         fn($record): bool => $record->total == 0 || $record->total == null
                     ),
+                ...HasLiveScoreActions::getLiveScoreTableActions('mfq'),
             ])
+            ->recordClasses(HasLiveScoreActions::getRecordClasses('mfq'))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),

@@ -17,6 +17,7 @@ use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use App\Filament\Penilaian\Concerns\HasLiveScoreActions;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -135,6 +136,7 @@ class NilaiMsqResource extends Resource
                 TextColumn::make('penghayatan_dan_retorika'),
                 TextColumn::make('tilawah'),
                 TextColumn::make('total'),
+                HasLiveScoreActions::getTimerTableColumn('msq'),
             ])
             ->defaultSort('final_bobot', 'desc')
             ->filters([
@@ -161,6 +163,7 @@ class NilaiMsqResource extends Resource
                     }),
             ])
             ->headerActions([
+                HasLiveScoreActions::getLiveScoreHeaderAction('msq'),
                 // ExportAction::make()
                 //     ->label(__('Download Excel'))
                 //     ->color('success')
@@ -177,7 +180,10 @@ class NilaiMsqResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Input Nilai')
+                    ->label('')
+                    ->tooltip('Input Nilai')
+                    ->icon('heroicon-o-plus')
+                    ->color('success')
                     ->after(function ($data, $record) {
                         $record->bobot_total = $record->total * 100000000;
                         $record->bobot_terjemahan_dan_materi = $record->terjemahan_dan_materi * 1000000;
@@ -194,12 +200,17 @@ class NilaiMsqResource extends Resource
                         $record->tilawah != 0 && $record->tilawah != null
                     ),
                 Tables\Actions\ViewAction::make()
-                    ->label('Lihat Nilai')
+                    ->label('')
+                    ->tooltip('Lihat Nilai')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
                     ->hidden(fn ($record): bool => $record->total == 0 || $record->total == null ||
                         $record->terjemahan_dan_materi == 0 || $record->terjemahan_dan_materi == null ||
                         $record->penghayatan_dan_retorika == 0 || $record->penghayatan_dan_retorika == null ||
                         $record->tilawah == 0 || $record->tilawah == null),
+                ...HasLiveScoreActions::getLiveScoreTableActions('msq'),
             ])
+            ->recordClasses(HasLiveScoreActions::getRecordClasses('msq'))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     // Tables\Actions\DeleteBulkAction::make(),

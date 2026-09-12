@@ -18,6 +18,7 @@ use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use App\Filament\Penilaian\Concerns\HasLiveScoreActions;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -163,6 +164,7 @@ class NilaiDewasaResource extends Resource
                 TextColumn::make('fashahah'),
                 TextColumn::make('suara'),
                 TextColumn::make('total'),
+                HasLiveScoreActions::getTimerTableColumn('dewasa'),
             ])
             ->paginated(false)
             ->defaultSort('final_bobot', 'desc')
@@ -190,6 +192,7 @@ class NilaiDewasaResource extends Resource
                     }),
             ])
             ->headerActions([
+                HasLiveScoreActions::getLiveScoreHeaderAction('dewasa'),
                 // ExportAction::make()
                 //     ->label(__('Download Excel'))
                 //     ->color('success')
@@ -206,7 +209,10 @@ class NilaiDewasaResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Input Nilai')
+                    ->label('')
+                    ->tooltip('Input Nilai')
+                    ->icon('heroicon-o-plus')
+                    ->color('success')
                     ->after(function ($data, $record) {
                         $record->bobot_total = $record->total * 100000000;
                         $record->bobot_tajwid = $record->tajwid * 1000000;
@@ -224,14 +230,19 @@ class NilaiDewasaResource extends Resource
                         $record->suara != 0 && $record->suara != null
                     ),
                 Tables\Actions\ViewAction::make()
-                    ->label('Lihat Nilai')
+                    ->label('')
+                    ->tooltip('Lihat Nilai')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
                     ->hidden(fn ($record): bool => $record->total == 0 || $record->total == null ||
                         $record->tajwid == 0 || $record->tajwid == null ||
                         $record->lagu == 0 || $record->lagu == null ||
                         $record->fashahah == 0 || $record->fashahah == null ||
                         $record->suara == 0 || $record->suara == null
                     ),
+                ...HasLiveScoreActions::getLiveScoreTableActions('dewasa'),
             ])
+            ->recordClasses(HasLiveScoreActions::getRecordClasses('dewasa'))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     // Tables\Actions\DeleteBulkAction::make(),

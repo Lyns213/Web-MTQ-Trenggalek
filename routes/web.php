@@ -18,6 +18,7 @@ use App\Http\Controllers\NilaiRemajaController;
 use App\Http\Controllers\NilaiTartilController;
 use App\Http\Controllers\NilaiTartilV2Controller;
 use App\Http\Controllers\NilaiTartilLiveController;
+use App\Http\Controllers\LiveScoreController;
 use App\Http\Controllers\TimerStatusController;
 use App\Http\Controllers\NilaiLimaJuzController;
 use App\Http\Controllers\NilaiSatuJuzController;
@@ -47,9 +48,13 @@ use App\Http\Controllers\NilaiTigapuluhJuzController;
 
 Route::post("/tahun-filter", [\App\Http\Controllers\TahunFilterController::class, "filter"])->name("tahun.filter");
 
-Route::get("/live-tartil/data/{id?}", [NilaiTartilLiveController::class, "getData"])->name("nilai-tartil-live.data");
-Route::get("/live-tartil/timer/{action}", [NilaiTartilLiveController::class, "controlTimer"])->name("nilai-tartil-live.timer");
-Route::get("/live-tartil/{id?}", [NilaiTartilLiveController::class, "index"])->name("nilai-tartil-live.index");
+Route::get("/live/{slug}/data/{id?}", [LiveScoreController::class, "getData"])->name("live-score.data");
+Route::get("/live/{slug}/timer/{action}", [LiveScoreController::class, "controlTimer"])->name("live-score.timer");
+Route::get("/live/{slug}/{id?}", [LiveScoreController::class, "index"])->name("live-score.index");
+
+Route::get("/live-tartil/data/{id?}", [LiveScoreController::class, "getData"])->name("nilai-tartil-live.data");
+Route::get("/live-tartil/timer/{action}", [LiveScoreController::class, "controlTimer"])->name("nilai-tartil-live.timer");
+Route::get("/live-tartil/{id?}", [LiveScoreController::class, "index"])->name("nilai-tartil-live.index");
 Route::get("/mtq-timer-status", [TimerStatusController::class, "index"])->name("timer-status");
 Route::fallback(function() {
     return redirect()->back();

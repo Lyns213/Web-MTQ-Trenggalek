@@ -15,6 +15,7 @@ use Filament\Forms\Components\Split;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use App\Filament\Penilaian\Concerns\HasLiveScoreActions;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Infolists\Components\Section;
@@ -135,6 +136,7 @@ class NilaiDekorasiResource extends Resource
                 TextColumn::make('keindahan_khath'),
                 TextColumn::make('keindahan_hiasan_dan_lukisan'),
                 TextColumn::make('total'),
+                HasLiveScoreActions::getTimerTableColumn('dekorasi'),
             ])
             ->paginated(false)
             ->defaultSort('final_bobot', 'desc')
@@ -162,6 +164,7 @@ class NilaiDekorasiResource extends Resource
                     }),
             ])
             ->headerActions([
+                HasLiveScoreActions::getLiveScoreHeaderAction('dekorasi'),
                 // ExportAction::make()
                 //     ->label(__('Download Excel'))
                 //     ->color('success')
@@ -170,15 +173,13 @@ class NilaiDekorasiResource extends Resource
                 //             'index',
                 //         ]),
                 //     ])
-                // Action::make('viewNilaiTartil')
-                //     ->label('Penilaian MKQ Dekorasi')
-                //     ->url(route('nilai-dekorasi.index'))
-                //     ->icon('heroicon-o-eye')
-                //     ->openUrlInNewTab(),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Input Nilai')
+                    ->label('')
+                    ->tooltip('Input Nilai')
+                    ->icon('heroicon-o-plus')
+                    ->color('success')
                     ->after(function ($data, $record) {
                         $record->bobot_total = $record->total * 100000000;
                         $record->bobot_kebenaran_kaidah_khath = $record->kebenaran_kaidah_khath * 1000000;
@@ -195,12 +196,17 @@ class NilaiDekorasiResource extends Resource
                         $record->keindahan_hiasan_dan_lukisan != 0 && $record->keindahan_hiasan_dan_lukisan != null
                     ),
                 Tables\Actions\ViewAction::make()
-                    ->label('Lihat Nilai')
+                    ->label('')
+                    ->tooltip('Lihat Nilai')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
                     ->hidden(fn ($record): bool => $record->total == 0 || $record->total == null ||
                         $record->kebenaran_kaidah_khath == 0 || $record->kebenaran_kaidah_khath == null ||
                         $record->keindahan_khath == 0 || $record->keindahan_khath == null ||
                         $record->keindahan_hiasan_dan_lukisan == 0 || $record->keindahan_hiasan_dan_lukisan == null),
+                ...HasLiveScoreActions::getLiveScoreTableActions('dekorasi'),
             ])
+            ->recordClasses(HasLiveScoreActions::getRecordClasses('dekorasi'))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     // Tables\Actions\DeleteBulkAction::make(),

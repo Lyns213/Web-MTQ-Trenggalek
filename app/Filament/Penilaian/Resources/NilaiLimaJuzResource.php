@@ -17,6 +17,7 @@ use Filament\Forms\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use App\Filament\Penilaian\Concerns\HasLiveScoreActions;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -246,6 +247,7 @@ class NilaiLimaJuzResource extends Resource
                 TextColumn::make('total_tilawah'),
                 TextColumn::make('total_tahfizh'),
                 TextColumn::make('total'),
+                HasLiveScoreActions::getTimerTableColumn('limajuz'),
             ])
             ->defaultSort('final_bobot', 'desc')
             ->filters([
@@ -272,6 +274,7 @@ class NilaiLimaJuzResource extends Resource
                     }),
             ])
             ->headerActions([
+                HasLiveScoreActions::getLiveScoreHeaderAction('limajuz'),
                 // ExportAction::make()
                 //     ->label(__('Download Excel'))
                 //     ->color('success')
@@ -288,7 +291,10 @@ class NilaiLimaJuzResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Input Nilai')
+                    ->label('')
+                    ->tooltip('Input Nilai')
+                    ->icon('heroicon-o-plus')
+                    ->color('success')
                     ->after(function ($data, $record) {
                         $record->total = $record->total_tilawah + $record->total_tahfizh;
                         $record->bobot_total = $record->total * 100000000;
@@ -310,7 +316,10 @@ class NilaiLimaJuzResource extends Resource
                         $record->tah_fashahah != 0 && $record->tah_fashahah != null
                     ),
                 Tables\Actions\ViewAction::make()
-                    ->label('Lihat Nilai')
+                    ->label('')
+                    ->tooltip('Lihat Nilai')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
                     ->hidden(fn ($record): bool => $record->total_tilawah == 0 || $record->total_tilawah == null ||
                         $record->til_tajwid == 0 || $record->til_tajwid == null ||
                         $record->til_lagu == 0 || $record->til_lagu == null ||
@@ -320,7 +329,9 @@ class NilaiLimaJuzResource extends Resource
                         $record->tah_tajwid == 0 || $record->tah_tajwid == null ||
                         $record->tah_fashahah == 0 || $record->tah_fashahah == null
                     ),
+                ...HasLiveScoreActions::getLiveScoreTableActions('limajuz'),
             ])
+            ->recordClasses(HasLiveScoreActions::getRecordClasses('limajuz'))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     // Tables\Actions\DeleteBulkAction::make(),
