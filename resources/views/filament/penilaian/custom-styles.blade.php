@@ -281,7 +281,7 @@ body.fi-panel-penilaian {
     box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
 }
 
-.fi-panel-penilaian .fi-topbar * {
+.fi-panel-penilaian .fi-topbar :not(.fi-dropdown-panel *) {
     color: #ffffff;
 }
 
