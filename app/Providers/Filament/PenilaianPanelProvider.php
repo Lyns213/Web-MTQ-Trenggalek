@@ -43,7 +43,6 @@ class PenilaianPanelProvider extends PanelProvider
             ])
             ->widgets([
                 \App\Filament\Penilaian\Widgets\DashboardStatsWidget::class,
-                \App\Filament\Penilaian\Widgets\PenilaianButtonsWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

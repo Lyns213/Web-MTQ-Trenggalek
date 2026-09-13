@@ -29,6 +29,17 @@
 
         {{-- Action Buttons --}}
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            @if(!empty($accessibleCabangs))
+                @foreach($accessibleCabangs as $cabang)
+                <a href="{{ $cabang['url'] }}" style="display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #d4af37 0%, #b8923e 100%); border: 1.5px solid #f3d069; color: #071524; padding: 10px 18px; border-radius: 10px; font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; box-shadow: 0 4px 14px rgba(212, 175, 55, 0.35); transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, #f5d46e 0%, #d4af37 100%)'; this.style.boxShadow='0 0 20px rgba(212, 175, 55, 0.6)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.background='linear-gradient(135deg, #d4af37 0%, #b8923e 100%)'; this.style.boxShadow='0 4px 14px rgba(212, 175, 55, 0.35)'; this.style.transform='translateY(0)';">
+                    <svg style="width: 17px; height: 17px; color: #071524;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    <span>{{ $cabang['label'] }}</span>
+                </a>
+                @endforeach
+            @endif
+
             @if(!empty($cabangSlug))
             <a href="/live/{{ $cabangSlug }}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(229, 57, 53, 0.15); border: 1.5px solid #e53935; color: #ffffff; padding: 10px 18px; border-radius: 10px; font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='#e53935'; this.style.boxShadow='0 0 16px rgba(229, 57, 53, 0.6)'" onmouseout="this.style.background='rgba(229, 57, 53, 0.15)'; this.style.boxShadow='none'">
                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #ff4d4d; box-shadow: 0 0 8px #ff4d4d;"></span>
@@ -41,7 +52,7 @@
     {{-- Stats Cards Grid (3 Columns) --}}
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
         {{-- Card 1: Total Peserta --}}
-        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); transition: transform 0.2s, border-color 0.2s; position: relative;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='#d4af37';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#e2e8f0';">
+        <div class="penilaian-stat-card" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); transition: transform 0.2s, border-color 0.2s; position: relative;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='#d4af37';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#e2e8f0';">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                 <span style="font-size: 12px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
                     TOTAL PESERTA
@@ -52,17 +63,17 @@
                     </svg>
                 </div>
             </div>
-            <div style="font-size: 38px; font-weight: 900; color: #0c233c; line-height: 1; letter-spacing: -0.5px;">
+            <div class="stat-number-default" style="font-size: 38px; font-weight: 900; color: #0c233c; line-height: 1; letter-spacing: -0.5px;">
                 {{ $stats['total'] }}
             </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 8px;">
+            <div class="stat-footer-border" style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 8px;">
                 <span>Sudah Dinilai: <strong style="color: #059669;">{{ $stats['sudah_dinilai'] ?? 0 }}</strong></span>
                 <span>Belum: <strong style="color: #ea580c;">{{ $stats['belum_dinilai'] ?? 0 }}</strong></span>
             </div>
         </div>
 
         {{-- Card 2: Peserta Putra --}}
-        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='#10b981';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#e2e8f0';">
+        <div class="penilaian-stat-card" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='#10b981';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#e2e8f0';">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                 <span style="font-size: 12px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
                     PESERTA PUTRA
@@ -76,14 +87,14 @@
             <div style="font-size: 38px; font-weight: 900; color: #065f46; line-height: 1; letter-spacing: -0.5px;">
                 {{ $stats['laki'] }}
             </div>
-            <div style="margin-top: 10px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 8px;">
+            <div class="stat-footer-border" style="margin-top: 10px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 8px;">
                 @php $putraPct = $stats['total'] > 0 ? round(($stats['laki'] / $stats['total']) * 100, 1) : 0; @endphp
                 <span>Proporsi: <strong style="color: #059669;">{{ $putraPct }}%</strong> dari total</span>
             </div>
         </div>
 
         {{-- Card 3: Peserta Putri --}}
-        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='#e11d48';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#e2e8f0';">
+        <div class="penilaian-stat-card" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='#e11d48';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#e2e8f0';">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
                 <span style="font-size: 12px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
                     PESERTA PUTRI
@@ -97,7 +108,7 @@
             <div style="font-size: 38px; font-weight: 900; color: #9f1239; line-height: 1; letter-spacing: -0.5px;">
                 {{ $stats['perempuan'] }}
             </div>
-            <div style="margin-top: 10px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 8px;">
+            <div class="stat-footer-border" style="margin-top: 10px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 8px;">
                 @php $putriPct = $stats['total'] > 0 ? round(($stats['perempuan'] / $stats['total']) * 100, 1) : 0; @endphp
                 <span>Proporsi: <strong style="color: #e11d48;">{{ $putriPct }}%</strong> dari total</span>
             </div>
@@ -106,9 +117,9 @@
 
     {{-- Ratio Bar --}}
     @if($stats['total'] > 0)
-    <div style="margin-top: 16px; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px 20px;">
+    <div class="penilaian-ratio-bar" style="margin-top: 16px; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span style="font-size: 12px; font-weight: 800; color: #0c233c; letter-spacing: 0.8px; text-transform: uppercase;">
+            <span class="stat-number-default" style="font-size: 12px; font-weight: 800; color: #0c233c; letter-spacing: 0.8px; text-transform: uppercase;">
                 DISTRIBUSI GENDER PESERTA
             </span>
             <span style="font-size: 12px; font-weight: 700; color: #64748b;">

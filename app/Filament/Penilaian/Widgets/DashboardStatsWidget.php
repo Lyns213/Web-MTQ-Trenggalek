@@ -47,6 +47,21 @@ class DashboardStatsWidget extends Widget
         $cabangLabel = $user->name ?? 'Cabang';
         $cabangSlug = 'tartil';
 
+        $accessibleCabangs = [];
+        foreach ($resources as $r) {
+            try {
+                if ($r['class']::canViewAny()) {
+                    $accessibleCabangs[] = [
+                        'label' => $r['label'],
+                        'url' => $r['class']::getUrl('index', panel: 'penilaian'),
+                        'slug' => $r['slug'] ?? 'tartil',
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // skip
+            }
+        }
+
         foreach ($resources as $r) {
             if (!$r['class']::canViewAny()) continue;
             if (!Schema::hasTable($r['table'])) continue;
@@ -87,6 +102,11 @@ class DashboardStatsWidget extends Widget
             break;
         }
 
-        return ['stats' => $stats, 'cabangLabel' => $cabangLabel, 'cabangSlug' => $cabangSlug];
+        return [
+            'stats' => $stats,
+            'cabangLabel' => $cabangLabel,
+            'cabangSlug' => $cabangSlug,
+            'accessibleCabangs' => $accessibleCabangs,
+        ];
     }
 }

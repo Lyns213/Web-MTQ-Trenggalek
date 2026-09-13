@@ -14,6 +14,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiTartil::class,
             'table' => 'nilai_tartils',
             'label' => 'TARTIL',
+            'timer' => '00:05:00',
             'fields' => [
                 ['key' => 'tajwid', 'label' => 'TAJWID', 'max' => 40],
                 ['key' => 'irama_dan_suara', 'label' => 'IRAMA & SUARA', 'max' => 30],
@@ -24,6 +25,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiAnak::class,
             'table' => 'nilai_anaks',
             'label' => 'TILAWAH ANAK-ANAK',
+            'timer' => '00:06:00',
             'fields' => [
                 ['key' => 'tajwid', 'label' => 'TAJWID', 'max' => 30],
                 ['key' => 'lagu', 'label' => 'LAGU', 'max' => 25],
@@ -35,6 +37,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiRemaja::class,
             'table' => 'nilai_remajas',
             'label' => 'TILAWAH REMAJA',
+            'timer' => '00:07:00',
             'fields' => [
                 ['key' => 'tajwid', 'label' => 'TAJWID', 'max' => 30],
                 ['key' => 'lagu', 'label' => 'LAGU', 'max' => 25],
@@ -46,6 +49,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiDewasa::class,
             'table' => 'nilai_dewasas',
             'label' => 'TILAWAH DEWASA',
+            'timer' => '00:09:00',
             'fields' => [
                 ['key' => 'tajwid', 'label' => 'TAJWID', 'max' => 30],
                 ['key' => 'lagu', 'label' => 'LAGU', 'max' => 25],
@@ -57,6 +61,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiSatuJuz::class,
             'table' => 'nilai_satu_juzs',
             'label' => 'MHQ 1 JUZ & TILAWAH',
+            'timer' => '00:06:00',
             'fields' => [
                 ['key' => 'total_tilawah', 'label' => 'TILAWAH', 'max' => 50],
                 ['key' => 'total_tahfizh', 'label' => 'TAHFIZH', 'max' => 50],
@@ -66,6 +71,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiLimaJuz::class,
             'table' => 'nilai_lima_juzs',
             'label' => 'MHQ 5 JUZ & TILAWAH',
+            'timer' => '00:07:00',
             'fields' => [
                 ['key' => 'total_tilawah', 'label' => 'TILAWAH', 'max' => 50],
                 ['key' => 'total_tahfizh', 'label' => 'TAHFIZH', 'max' => 50],
@@ -75,6 +81,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiSepuluhJuz::class,
             'table' => 'nilai_sepuluh_juzs',
             'label' => 'MHQ 10 JUZ',
+            'timer' => '00:05:00',
             'fields' => [
                 ['key' => 'tahfizh', 'label' => 'TAHFIZH', 'max' => 50],
                 ['key' => 'tajwid', 'label' => 'TAJWID', 'max' => 25],
@@ -85,6 +92,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiDuapuluhJuz::class,
             'table' => 'nilai_duapuluh_juzs',
             'label' => 'MHQ 20 JUZ',
+            'timer' => '00:05:00',
             'fields' => [
                 ['key' => 'tahfizh', 'label' => 'TAHFIZH', 'max' => 50],
                 ['key' => 'tajwid', 'label' => 'TAJWID', 'max' => 25],
@@ -95,6 +103,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiTigapuluhJuz::class,
             'table' => 'nilai_tigapuluh_juzs',
             'label' => 'MHQ 30 JUZ',
+            'timer' => '00:05:00',
             'fields' => [
                 ['key' => 'tahfizh', 'label' => 'TAHFIZH', 'max' => 50],
                 ['key' => 'tajwid', 'label' => 'TAJWID', 'max' => 25],
@@ -105,6 +114,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiMfq::class,
             'table' => 'nilai_mfqs',
             'label' => 'MFQ',
+            'timer' => '00:05:00',
             'is_grup' => true,
             'fields' => [
                 ['key' => 'total', 'label' => 'TOTAL NILAI', 'max' => 100],
@@ -114,6 +124,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiMsq::class,
             'table' => 'nilai_msqs',
             'label' => 'MSQ',
+            'timer' => '00:20:00',
             'fields' => [
                 ['key' => 'terjemahan_dan_materi', 'label' => 'TERJEMAH & MATERI', 'max' => 40],
                 ['key' => 'penghayatan_dan_retorika', 'label' => 'PENGHAYATAN & RETORIKA', 'max' => 30],
@@ -124,6 +135,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiMmq::class,
             'table' => 'nilai_mmqs',
             'label' => 'MMQ',
+            'timer' => '00:05:00',
             'fields' => [
                 ['key' => 'bobot_materi', 'label' => 'BOBOT MATERI', 'max' => 40],
                 ['key' => 'kaidah_dan_gaya_bahasa', 'label' => 'KAIDAH & GAYA BAHASA', 'max' => 25],
@@ -135,6 +147,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiNaskah::class,
             'table' => 'nilai_naskahs',
             'label' => 'MKQ NASKAH',
+            'timer' => '00:05:00',
             'fields' => [
                 ['key' => 'kebenaran_kaidah_khat_wajib', 'label' => 'KAIDAH WAJIB', 'max' => 35],
                 ['key' => 'keindahan_khat_wajib', 'label' => 'KEINDAHAN WAJIB', 'max' => 25],
@@ -146,6 +159,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiMushaf::class,
             'table' => 'nilai_mushafs',
             'label' => 'MKQ HIASAN MUSHAF',
+            'timer' => '00:05:00',
             'fields' => [
                 ['key' => 'kebenaran_kaidah_khat', 'label' => 'KAIDAH KHAT', 'max' => 45],
                 ['key' => 'keindahan_khat', 'label' => 'KEINDAHAN KHAT', 'max' => 35],
@@ -156,6 +170,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiDekorasi::class,
             'table' => 'nilai_dekorasis',
             'label' => 'MKQ DEKORASI',
+            'timer' => '00:05:00',
             'fields' => [
                 ['key' => 'kebenaran_kaidah_khath', 'label' => 'KAIDAH KHAT', 'max' => 45],
                 ['key' => 'keindahan_khath', 'label' => 'KEINDAHAN KHAT', 'max' => 35],
@@ -166,6 +181,7 @@ class LiveScoreController extends Controller
             'model' => \App\Models\NilaiKontemporer::class,
             'table' => 'nilai_kontemporers',
             'label' => 'MKQ KONTEMPORER',
+            'timer' => '00:05:00',
             'fields' => [
                 ['key' => 'unsur_kaligrafi', 'label' => 'UNSUR KALIGRAFI', 'max' => 40],
                 ['key' => 'unsur_seni_rupa', 'label' => 'UNSUR SENI RUPA', 'max' => 35],
@@ -183,9 +199,11 @@ class LiveScoreController extends Controller
 
         $dataResponse = $this->getData($slug, $id);
         $initialData = $dataResponse->getData(true);
+        $cfg = self::$config[$slug] ?? self::$config['tartil'];
 
         return view('filament.penilaian.tartil-live', [
             'slug' => $slug,
+            'cfg' => $cfg,
             'activeId' => $id,
             'initialData' => $initialData,
         ]);
@@ -252,9 +270,37 @@ class LiveScoreController extends Controller
             }
         }
 
+        $defaultFields = [];
+        foreach ($cfg['fields'] as $f) {
+            $defaultFields[] = [
+                'key' => $f['key'],
+                'label' => $f['label'],
+                'value' => 0.0,
+                'max' => $f['max'] ?? 100,
+                'pct' => 0.0,
+            ];
+        }
+
         $isGrup = !empty($cfg['is_grup']);
         if (!$currentRecord || (!$isGrup && !$currentRecord->peserta) || ($isGrup && !$currentRecord->grup)) {
-            return response()->json(['empty' => true, 'total' => $records->count()]);
+            $defaultTimer = $cfg['timer'] ?? '00:05:00';
+            $parts = explode(':', $defaultTimer);
+            $totalSecs = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
+            $m = floor($totalSecs / 60);
+            $s = $totalSecs % 60;
+            return response()->json([
+                'empty' => true,
+                'cabang' => $cfg['label'],
+                'fields' => $defaultFields,
+                'total' => 0.0,
+                'total_peserta' => $records->count(),
+                'timer' => [
+                    'formatted' => sprintf('%02d:%02d', $m, $s),
+                    'remaining' => $totalSecs,
+                    'total' => $totalSecs,
+                    'is_running' => false,
+                ],
+            ]);
         }
 
         $currentIndex = $records->search(fn ($r) => $r->id === $currentRecord->id);

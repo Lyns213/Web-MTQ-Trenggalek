@@ -1,16 +1,29 @@
 @php
+    $slug = strtolower($slug ?? 'tartil');
+    $cfg = $cfg ?? (\App\Http\Controllers\LiveScoreController::$config[$slug] ?? \App\Http\Controllers\LiveScoreController::$config['tartil']);
     $curr = $initialData['current'] ?? null;
     $timer = $initialData['timer'] ?? null;
     $total = (float)($curr['total'] ?? 0);
-    $fields = $curr['fields'] ?? [];
-    $slug = $slug ?? 'tartil';
+    $cabangLabel = $curr['cabang'] ?? ($initialData['cabang'] ?? $cfg['label']);
+    $fields = !empty($curr['fields']) ? $curr['fields'] : ($initialData['fields'] ?? []);
+    if (empty($fields) && !empty($cfg['fields'])) {
+        foreach ($cfg['fields'] as $f) {
+            $fields[] = [
+                'key' => $f['key'],
+                'label' => $f['label'],
+                'value' => 0.0,
+                'max' => $f['max'] ?? 100,
+                'pct' => 0.0,
+            ];
+        }
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Score Board - MTQ Kabupaten Trenggalek 2026</title>
+    <title>Live Score Board - MTQ Kabupaten Trenggalek 2026 - Cabang {{ $cabangLabel }}</title>
     <link rel="icon" href="{{ asset('images/logotgxmini.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -459,33 +472,21 @@
         </div>
 
         <div class="cabang-subtitle" id="cabangTitle">
-            <span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG {{ $curr['cabang'] ?? 'TARTIL' }})</span>
+            <span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG {{ $cabangLabel }})</span>
         </div>
 
         <div class="score-fields-container" id="scoreFieldsContainer" style="display: flex; flex-direction: column; justify-content: space-around; flex: 1; margin: 4px 0; gap: 4px;">
-            @if(!empty($fields))
-                @foreach($fields as $idx => $f)
-                <div class="score-field">
-                    <div class="score-field-top">
-                        <span class="score-field-label">{{ $f['label'] }}</span>
-                        <span class="score-field-num" id="sVal_{{ $idx }}">{{ number_format($f['value'], 2) }}</span>
-                    </div>
-                    <div class="score-track">
-                        <div class="score-fill" id="sBar_{{ $idx }}" style="width: {{ $f['pct'] }}%;"></div>
-                    </div>
+            @foreach($fields as $idx => $f)
+            <div class="score-field">
+                <div class="score-field-top">
+                    <span class="score-field-label">{{ $f['label'] }}</span>
+                    <span class="score-field-num" id="sVal_{{ $idx }}">{{ number_format($f['value'], 2) }}</span>
                 </div>
-                @endforeach
-            @else
-                <div class="score-field">
-                    <div class="score-field-top">
-                        <span class="score-field-label">SKOR</span>
-                        <span class="score-field-num">{{ number_format($total, 2) }}</span>
-                    </div>
-                    <div class="score-track">
-                        <div class="score-fill" style="width: {{ min(100, $total) }}%;"></div>
-                    </div>
+                <div class="score-track">
+                    <div class="score-fill" id="sBar_{{ $idx }}" style="width: {{ $f['pct'] }}%;"></div>
                 </div>
-            @endif
+            </div>
+            @endforeach
         </div>
 
         <!-- TOTAL SKOR -->
@@ -531,9 +532,41 @@ function fmtTime(s) {
     return (m < 10 ? '0' + m : m) + ':' + (sec < 10 ? '0' + sec : sec);
 }
 
+function renderFields(fields) {
+    var container = document.getElementById('scoreFieldsContainer');
+    if (!container || !fields || fields.length === 0) return;
+    var html = '';
+    fields.forEach(function(f, idx) {
+        html += '<div class="score-field">' +
+            '<div class="score-field-top">' +
+                '<span class="score-field-label">' + f.label + '</span>' +
+                '<span class="score-field-num" id="sVal_' + idx + '">' + Number(f.value).toFixed(2) + '</span>' +
+            '</div>' +
+            '<div class="score-track">' +
+                '<div class="score-fill" id="sBar_' + idx + '" style="width: ' + f.pct + '%;"></div>' +
+            '</div>' +
+        '</div>';
+    });
+    container.innerHTML = html;
+}
+
 function updateDisplay(data) {
     if (data.empty) {
         document.getElementById('pName').textContent = 'BELUM ADA PESERTA';
+        document.getElementById('pNumber').textContent = '-';
+        document.getElementById('pOrigin').textContent = '-';
+        var photoEl = document.getElementById('pPhoto');
+        var photoPh = document.getElementById('pPhotoPh');
+        photoEl.style.display = 'none';
+        photoPh.style.display = 'flex';
+
+        if (data.cabang) {
+            document.getElementById('cabangTitle').innerHTML = '<span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG ' + data.cabang + ')</span>';
+        }
+        if (data.fields && data.fields.length > 0) {
+            renderFields(data.fields);
+        }
+        document.getElementById('sTotal').textContent = '0.00';
         return;
     }
 
@@ -561,20 +594,7 @@ function updateDisplay(data) {
     }
 
     if (data.current.fields && data.current.fields.length > 0) {
-        var container = document.getElementById('scoreFieldsContainer');
-        var html = '';
-        data.current.fields.forEach(function(f, idx) {
-            html += '<div class="score-field">' +
-                '<div class="score-field-top">' +
-                    '<span class="score-field-label">' + f.label + '</span>' +
-                    '<span class="score-field-num" id="sVal_' + idx + '">' + Number(f.value).toFixed(2) + '</span>' +
-                '</div>' +
-                '<div class="score-track">' +
-                    '<div class="score-fill" id="sBar_' + idx + '" style="width: ' + f.pct + '%;"></div>' +
-                '</div>' +
-            '</div>';
-        });
-        container.innerHTML = html;
+        renderFields(data.current.fields);
     }
 
     document.getElementById('sTotal').textContent = Number(data.current.total || 0).toFixed(2);
@@ -605,7 +625,9 @@ function fetchData() {
 function navigateParticipant(direction) {
     var targetId = direction === 'next' ? nextId : prevId;
     if (targetId) {
-        window.location.href = '/live/' + currentSlug + '/' + targetId;
+        currentId = targetId;
+        window.history.pushState({}, '', '/live/' + currentSlug + '/' + targetId);
+        fetchData();
     }
 }
 
