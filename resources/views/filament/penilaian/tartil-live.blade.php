@@ -17,6 +17,7 @@
             ];
         }
     }
+    $participants = $initialData['participants'] ?? [];
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -55,13 +56,12 @@
         }
 
         /* ===== PARTICIPANT CARD ===== */
-        /* Exact coordinates: left: 236px, top: 212px, width: 312px, height: 437px */
         .card-participant {
             position: absolute;
-            left: 236px;
-            top: 212px;
-            width: 312px;
-            height: 437px;
+            left: 60px;
+            top: 206px;
+            width: 290px;
+            height: 446px;
             background: #ffffff;
             border-radius: 20px;
             overflow: hidden;
@@ -72,8 +72,8 @@
         }
 
         .participant-photo-wrap {
-            width: 312px;
-            height: 242px;
+            width: 290px;
+            height: 236px;
             background: #0d1e30;
             position: relative;
             overflow: hidden;
@@ -96,17 +96,17 @@
             justify-content: center;
             background: linear-gradient(135deg, #0a1f35, #143557);
             color: #d4af37;
-            font-size: 80px;
+            font-size: 76px;
         }
 
         .participant-navy-box {
             background: linear-gradient(180deg, #0d2843 0%, #061628 100%);
             border-top: 4px solid #caa44e;
-            padding: 14px 18px 10px;
+            padding: 12px 16px 8px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            height: 125px;
+            height: 134px;
             flex-shrink: 0;
             position: relative;
         }
@@ -122,8 +122,8 @@
         .participant-name {
             font-family: 'Montserrat', sans-serif;
             font-weight: 800;
-            font-size: 24px;
-            line-height: 1.15;
+            font-size: 20px;
+            line-height: 1.18;
             color: #ffffff;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -142,18 +142,18 @@
         .participant-number {
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             color: #e5b958;
-            letter-spacing: 1.5px;
+            letter-spacing: 1.2px;
             text-transform: uppercase;
         }
 
         .participant-white-box {
             background: #ffffff;
-            padding: 0 22px;
+            padding: 0 18px;
             display: flex;
             align-items: center;
-            height: 70px;
+            height: 76px;
             flex-shrink: 0;
             border-top: 1px solid rgba(0,0,0,0.05);
         }
@@ -169,7 +169,7 @@
 
         .origin-label {
             font-family: 'Montserrat', sans-serif;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
             color: #111111;
             letter-spacing: 0.5px;
@@ -178,7 +178,7 @@
 
         .origin-value {
             font-family: 'Montserrat', sans-serif;
-            font-size: 21px;
+            font-size: 19px;
             font-weight: 900;
             color: #0c233c;
             letter-spacing: 0.8px;
@@ -186,18 +186,17 @@
         }
 
         /* ===== SCORE CARD ===== */
-        /* Exact coordinates: left: 564px, top: 212px, width: 582px, height: 437px */
         .card-score {
             position: absolute;
-            left: 564px;
-            top: 212px;
-            width: 582px;
-            height: 437px;
+            left: 366px;
+            top: 206px;
+            width: 534px;
+            height: 446px;
             background: linear-gradient(180deg, #0d2843 0%, #0a2037 40%, #061626 100%);
             border: 2px solid #527598;
             border-radius: 20px;
             box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            padding: 16px 24px 18px 24px;
+            padding: 14px 22px 16px 22px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -229,7 +228,7 @@
 
         .timer-text-label {
             font-family: 'Montserrat', sans-serif;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 800;
             color: #ffffff;
             letter-spacing: 0.5px;
@@ -238,10 +237,10 @@
 
         .timer-digits {
             font-family: 'Montserrat', sans-serif;
-            font-size: 60px;
+            font-size: 52px;
             font-weight: 800;
             color: #ffffff;
-            margin-left: 14px;
+            margin-left: 12px;
             font-variant-numeric: tabular-nums;
             letter-spacing: 1px;
             line-height: 1;
@@ -252,9 +251,9 @@
             background: #e53935;
             color: #ffffff;
             font-family: 'Montserrat', sans-serif;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 800;
-            padding: 5px 14px;
+            padding: 4px 12px;
             border-radius: 6px;
             display: inline-flex;
             align-items: center;
@@ -278,12 +277,12 @@
 
         .cabang-subtitle {
             font-family: 'Montserrat', sans-serif;
-            font-size: 15px;
+            font-size: 13.5px;
             font-weight: 800;
             letter-spacing: 0.5px;
             text-transform: uppercase;
             margin-top: 2px;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         .cabang-gold { color: #e5b958; }
         .cabang-white { color: #ffffff; }
@@ -292,28 +291,28 @@
         .score-field {
             display: flex;
             flex-direction: column;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .score-field-top {
             display: flex;
             justify-content: space-between;
             align-items: baseline;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .score-field-label {
             font-family: 'Montserrat', sans-serif;
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 800;
             color: #ffffff;
-            letter-spacing: 1.5px;
+            letter-spacing: 1.2px;
             text-transform: uppercase;
         }
 
         .score-field-num {
             font-family: 'Montserrat', sans-serif;
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 800;
             color: #ffffff;
             font-variant-numeric: tabular-nums;
@@ -322,7 +321,7 @@
 
         .score-track {
             width: 100%;
-            height: 16px;
+            height: 13px;
             background: #040e19;
             border: 2px solid #b8923e;
             border-radius: 20px;
@@ -345,11 +344,12 @@
             background: linear-gradient(180deg, #0b2238 0%, #051423 100%);
             border: 2px solid #c9a34b;
             border-radius: 12px;
-            padding: 10px 24px;
+            padding: 8px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-top: 6px;
+            margin-top: 4px;
+            height: 62px;
             box-shadow: 0 0 18px rgba(201, 163, 75, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15);
         }
 
@@ -366,7 +366,7 @@
         .badge-live-update {
             position: absolute;
             top: -10px;
-            right: 24px;
+            right: 20px;
             background: #e53935;
             color: #ffffff;
             font-family: 'Montserrat', sans-serif;
@@ -381,7 +381,7 @@
 
         .total-text-label {
             font-family: 'Montserrat', sans-serif;
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 800;
             color: #e5b958;
             letter-spacing: 1.2px;
@@ -390,13 +390,275 @@
 
         .total-text-digits {
             font-family: 'Montserrat', sans-serif;
-            font-size: 64px;
+            font-size: 54px;
             font-weight: 800;
             color: #ffffff;
             font-variant-numeric: tabular-nums;
             letter-spacing: 0.5px;
             line-height: 1;
             text-shadow: 0 0 20px rgba(255, 235, 160, 0.85), 0 0 38px rgba(212, 175, 55, 0.45);
+        }
+
+        /* ===== LEADERBOARD / PESERTA LAIN CARD ===== */
+        .card-leaderboard {
+            position: absolute;
+            left: 916px;
+            top: 206px;
+            width: 400px;
+            height: 446px;
+            background: linear-gradient(180deg, #0d2843 0%, #0a2037 40%, #061626 100%);
+            border: 2px solid #527598;
+            border-radius: 20px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .card-leaderboard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 15%;
+            right: 15%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #ffe082, transparent);
+        }
+
+        .lb-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+        }
+
+        .lb-title-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lb-sub {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 800;
+            color: #d4af37;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .lb-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .lb-tabs {
+            display: flex;
+            background: rgba(6, 22, 40, 0.7);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 8px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .lb-tab {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
+        }
+
+        .lb-tab.active {
+            background: #d4af37;
+            color: #071524;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .lb-table-head {
+            display: grid;
+            grid-template-columns: 30px 1fr 78px;
+            align-items: center;
+            padding: 6px 10px 4px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 800;
+            color: #64748b;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .lb-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding-right: 4px;
+            margin-top: 2px;
+            scrollbar-width: thin;
+            scrollbar-color: #caa44e rgba(13, 40, 67, 0.4);
+        }
+
+        .lb-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .lb-list::-webkit-scrollbar-track {
+            background: rgba(13, 40, 67, 0.4);
+            border-radius: 4px;
+        }
+        .lb-list::-webkit-scrollbar-thumb {
+            background: #caa44e;
+            border-radius: 4px;
+        }
+
+        .lb-item {
+            display: grid;
+            grid-template-columns: 30px 1fr 78px;
+            align-items: center;
+            padding: 6px 8px;
+            background: rgba(13, 40, 67, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+
+        .lb-item:hover {
+            background: rgba(212, 175, 55, 0.18);
+            border-color: rgba(212, 175, 55, 0.4);
+            transform: translateX(2px);
+        }
+
+        .lb-item.active {
+            background: linear-gradient(90deg, rgba(212, 175, 55, 0.28) 0%, rgba(13, 40, 67, 0.85) 100%);
+            border: 1.5px solid #f3d069;
+            box-shadow: 0 0 14px rgba(212, 175, 55, 0.35);
+        }
+
+        .lb-rank {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10.5px;
+            font-weight: 900;
+            background: rgba(255, 255, 255, 0.08);
+            color: #94a3b8;
+        }
+
+        .lb-rank.gold {
+            background: linear-gradient(135deg, #ffd700, #b8860b);
+            color: #0c1c2e;
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+        }
+        .lb-rank.silver {
+            background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+            color: #0c1c2e;
+        }
+        .lb-rank.bronze {
+            background: linear-gradient(135deg, #d97706, #92400e);
+            color: #ffffff;
+        }
+
+        .lb-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 0 8px;
+        }
+
+        .lb-name {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 800;
+            color: #ffffff;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+        }
+
+        .lb-item.active .lb-name {
+            color: #ffe082;
+        }
+
+        .lb-meta {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 9.5px;
+            font-weight: 600;
+            color: #94a3b8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+            margin-top: 1px;
+        }
+
+        .lb-score-wrap {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .lb-score-val {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            font-weight: 900;
+            color: #f3d069;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        .lb-score-empty {
+            display: inline-block;
+            min-height: 15px;
+            width: 10px;
+        }
+
+        .lb-live-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 8px;
+            font-weight: 800;
+            color: #ff4d4d;
+            letter-spacing: 0.5px;
+            line-height: 1;
+            margin-top: 2px;
+            text-transform: uppercase;
+            animation: pulse-dot 1.2s infinite ease-in-out;
+        }
+
+        .lb-footer {
+            padding-top: 7px;
+            margin-top: 4px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* Operator Toolbar (visible on hover) */
@@ -497,6 +759,77 @@
         </div>
     </div>
 
+    <!-- Leaderboard / Peserta Lain Card -->
+    <div class="card-leaderboard">
+        <div class="lb-header">
+            <div class="lb-title-group">
+                <span class="lb-sub">KLASEMEN NILAI</span>
+                <h3 class="lb-title">PESERTA LAIN</h3>
+            </div>
+            <div class="lb-tabs">
+                <button class="lb-tab active" id="tabRank" onclick="setLeaderboardSort('rank')">RANK</button>
+                <button class="lb-tab" id="tabOrder" onclick="setLeaderboardSort('order')">NO</button>
+            </div>
+        </div>
+
+        <div class="lb-table-head">
+            <span>#</span>
+            <span>PESERTA</span>
+            <span style="text-align: right;">SKOR</span>
+        </div>
+
+        <div class="lb-list" id="lbList">
+            @php
+                $sortedParticipants = $participants;
+                usort($sortedParticipants, function($a, $b) {
+                    if (($b['total'] ?? 0) != ($a['total'] ?? 0)) {
+                        return ($b['total'] ?? 0) <=> ($a['total'] ?? 0);
+                    }
+                    return strnatcmp($a['no_peserta'] ?? '', $b['no_peserta'] ?? '');
+                });
+                $sudahCount = 0;
+            @endphp
+            @forelse($sortedParticipants as $idx => $p)
+                @php
+                    $isCur = ($curr && ($p['id'] == ($curr['id'] ?? null)));
+                    $rankClass = '';
+                    if (($p['total'] ?? 0) > 0) {
+                        $sudahCount++;
+                        if ($idx === 0) $rankClass = 'gold';
+                        elseif ($idx === 1) $rankClass = 'silver';
+                        elseif ($idx === 2) $rankClass = 'bronze';
+                    }
+                @endphp
+                <div class="lb-item {{ $isCur ? 'active' : '' }}" onclick="selectParticipant({{ $p['id'] }})">
+                    <div class="lb-rank {{ $rankClass }}">{{ $idx + 1 }}</div>
+                    <div class="lb-info">
+                        <div class="lb-name" title="{{ $p['nama'] }}">{{ $p['nama'] }}</div>
+                        <div class="lb-meta">No. {{ $p['no_peserta'] }} &bull; {{ $p['kecamatan'] }}</div>
+                    </div>
+                    <div class="lb-score-wrap">
+                        @if(($p['total'] ?? 0) > 0)
+                            <span class="lb-score-val">{{ number_format($p['total'], 2) }}</span>
+                        @else
+                            <span class="lb-score-empty"></span>
+                        @endif
+                        @if($isCur)
+                            <span class="lb-live-tag">&bull; TAMPIL</span>
+                        @endif
+                    </div>
+                </div>
+            @empty
+                <div style="text-align: center; color: #64748b; padding: 30px 10px; font-size: 11px; font-weight: 700;">
+                    BELUM ADA PESERTA TERDAFTAR
+                </div>
+            @endforelse
+        </div>
+
+        <div class="lb-footer">
+            <span>MTQ TRENGGALEK 2026</span>
+            <span id="lbTotalCount">{{ count($participants) }} Peserta ({{ $sudahCount }} dinilai)</span>
+        </div>
+    </div>
+
     <!-- Operator Toolbar (visible on hover) -->
     <div class="op-bar">
         <button class="op-btn" id="btnPrev" onclick="navigateParticipant('prev')">&larr; Prev (&larr;)</button>
@@ -515,6 +848,136 @@ let prevId = {{ $initialData['previous']['id'] ?? 'null' }};
 let srvRem = {{ $timer['remaining'] ?? 300 }};
 let srvRun = {{ ($timer['is_running'] ?? false) ? 'true' : 'false' }};
 let lastUpd = Math.floor(Date.now() / 1000);
+let allParticipantsData = @json($participants);
+let lbSortMode = 'rank';
+let scrollDirection = 1; // 1 = scroll down, -1 = scroll up
+let isHovered = false;
+let isPaused = false;
+let autoScrollTimer = null;
+let lastActiveId = null;
+
+function setLeaderboardSort(mode) {
+    lbSortMode = mode;
+    var tabRank = document.getElementById('tabRank');
+    var tabOrder = document.getElementById('tabOrder');
+    if (tabRank) tabRank.classList.toggle('active', mode === 'rank');
+    if (tabOrder) tabOrder.classList.toggle('active', mode === 'order');
+    renderLeaderboard(allParticipantsData);
+}
+
+function selectParticipant(id) {
+    if (!id || id === currentId) return;
+    currentId = id;
+    window.history.pushState({}, '', '/live/' + currentSlug + '/' + id);
+    fetchData();
+}
+
+function renderLeaderboard(participants) {
+    if (participants) {
+        allParticipantsData = participants;
+    }
+    var container = document.getElementById('lbList');
+    if (!container) return;
+    if (!allParticipantsData || allParticipantsData.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 30px 10px; font-size: 11px; font-weight: 700;">BELUM ADA PESERTA TERDAFTAR</div>';
+        return;
+    }
+
+    var list = allParticipantsData.slice();
+
+    if (lbSortMode === 'rank') {
+        list.sort(function(a, b) {
+            var diff = (b.total || 0) - (a.total || 0);
+            if (diff !== 0) return diff;
+            return ('' + (a.no_peserta || '')).localeCompare('' + (b.no_peserta || ''), undefined, { numeric: true });
+        });
+    } else {
+        list.sort(function(a, b) {
+            return ('' + (a.no_peserta || '')).localeCompare('' + (b.no_peserta || ''), undefined, { numeric: true });
+        });
+    }
+
+    var html = '';
+    var sudahCount = 0;
+    list.forEach(function(p, idx) {
+        var isCurrent = (p.id === currentId);
+        var rankClass = '';
+        var hasScore = (p.total && Number(p.total) > 0);
+        if (hasScore) {
+            sudahCount++;
+            if (lbSortMode === 'rank') {
+                if (idx === 0) rankClass = 'gold';
+                else if (idx === 1) rankClass = 'silver';
+                else if (idx === 2) rankClass = 'bronze';
+            }
+        }
+
+        var scoreDisplay = hasScore
+            ? '<span class="lb-score-val">' + Number(p.total).toFixed(2) + '</span>'
+            : '<span class="lb-score-empty"></span>';
+
+        html += '<div class="lb-item ' + (isCurrent ? 'active' : '') + '" onclick="selectParticipant(' + p.id + ')">' +
+            '<div class="lb-rank ' + rankClass + '">' + (idx + 1) + '</div>' +
+            '<div class="lb-info">' +
+                '<div class="lb-name" title="' + (p.nama || '-') + '">' + (p.nama || '-') + '</div>' +
+                '<div class="lb-meta">No. ' + (p.no_peserta || '-') + ' &bull; ' + (p.kecamatan || '-') + '</div>' +
+            '</div>' +
+            '<div class="lb-score-wrap">' +
+                scoreDisplay +
+                (isCurrent ? '<span class="lb-live-tag">&bull; TAMPIL</span>' : '') +
+            '</div>' +
+        '</div>';
+    });
+
+    container.innerHTML = html;
+
+    var countEl = document.getElementById('lbTotalCount');
+    if (countEl) {
+        countEl.textContent = list.length + ' Peserta (' + sudahCount + ' dinilai)';
+    }
+
+    var activeEl = container.querySelector('.lb-item.active');
+    if (activeEl && lastActiveId !== currentId) {
+        lastActiveId = currentId;
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function initAutoScroll() {
+    var list = document.getElementById('lbList');
+    if (!list) return;
+
+    list.addEventListener('mouseenter', function() { isHovered = true; });
+    list.addEventListener('mouseleave', function() { isHovered = false; });
+    list.addEventListener('touchstart', function() { isHovered = true; }, { passive: true });
+    list.addEventListener('touchend', function() {
+        setTimeout(function() { isHovered = false; }, 2000);
+    }, { passive: true });
+
+    if (autoScrollTimer) clearInterval(autoScrollTimer);
+
+    autoScrollTimer = setInterval(function() {
+        if (isHovered || isPaused) return;
+        var maxScroll = list.scrollHeight - list.clientHeight;
+        if (maxScroll <= 8) return; // Muat semua, tidak perlu scroll
+
+        if (scrollDirection === 1) {
+            list.scrollTop += 0.8;
+            if (list.scrollTop >= maxScroll - 1) {
+                scrollDirection = -1;
+                isPaused = true;
+                setTimeout(function() { isPaused = false; }, 2500); // jeda di bawah
+            }
+        } else {
+            list.scrollTop -= 0.8;
+            if (list.scrollTop <= 1) {
+                scrollDirection = 1;
+                isPaused = true;
+                setTimeout(function() { isPaused = false; }, 2500); // jeda di atas
+            }
+        }
+    }, 35);
+}
 
 function fitStage() {
     var stage = document.getElementById('stageCanvas');
@@ -551,6 +1014,10 @@ function renderFields(fields) {
 }
 
 function updateDisplay(data) {
+    if (data.participants) {
+        renderLeaderboard(data.participants);
+    }
+
     if (data.empty) {
         document.getElementById('pName').textContent = 'BELUM ADA PESERTA';
         document.getElementById('pNumber').textContent = '-';
@@ -669,6 +1136,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 fetchData();
+initAutoScroll();
 setInterval(fetchData, 2500);
 setInterval(function() {
     if (srvRun) {

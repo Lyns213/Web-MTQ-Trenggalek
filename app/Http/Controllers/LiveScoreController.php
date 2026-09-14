@@ -282,6 +282,25 @@ class LiveScoreController extends Controller
         }
 
         $isGrup = !empty($cfg['is_grup']);
+        $participants = $records->map(function ($r) use ($isGrup) {
+            if ($isGrup) {
+                $nama = $r->grup?->nama ?? 'Grup';
+                $no = 'GRUP';
+                $kec = $r->grup?->utusan?->kecamatan ?? '-';
+            } else {
+                $nama = $r->peserta?->nama ?? '-';
+                $no = $r->peserta?->no_peserta ?? '-';
+                $kec = $r->peserta?->utusan?->kecamatan ?? $r->peserta?->tempat_lahir ?? '-';
+            }
+            return [
+                'id' => $r->id,
+                'nama' => $nama,
+                'no_peserta' => $no,
+                'kecamatan' => strtoupper($kec),
+                'total' => (float)($r->total ?? 0),
+            ];
+        })->values()->all();
+
         if (!$currentRecord || (!$isGrup && !$currentRecord->peserta) || ($isGrup && !$currentRecord->grup)) {
             $defaultTimer = $cfg['timer'] ?? '00:05:00';
             $parts = explode(':', $defaultTimer);
@@ -294,6 +313,7 @@ class LiveScoreController extends Controller
                 'fields' => $defaultFields,
                 'total' => 0.0,
                 'total_peserta' => $records->count(),
+                'participants' => $participants,
                 'timer' => [
                     'formatted' => sprintf('%02d:%02d', $m, $s),
                     'remaining' => $totalSecs,
@@ -406,6 +426,7 @@ class LiveScoreController extends Controller
                 'is_running' => $timerState['is_running'],
             ],
             'total_peserta' => $records->count(),
+            'participants' => $participants,
         ]);
     }
 
