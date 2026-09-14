@@ -47,7 +47,7 @@
             width: 1376px;
             height: 768px;
             position: relative;
-            background: url("{{ asset('images/asset_mtq_bg_template.jpg') }}") no-repeat center center;
+            background: url("{{ asset('images/asset_mtq_bg_template.jpg') }}?v={{ filemtime(public_path('images/asset_mtq_bg_template.jpg')) }}") no-repeat center center;
             background-size: 1376px 768px;
             overflow: hidden;
             flex-shrink: 0;
