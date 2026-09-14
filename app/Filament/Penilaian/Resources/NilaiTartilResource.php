@@ -206,6 +206,7 @@ class NilaiTartilResource extends Resource
                         }
                     }),
             ])
+            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.tartil-stats-header')->render()))
             ->headerActions([
                 Action::make('viewNilaiTartil')
                     ->label('Penilaian Tartil')

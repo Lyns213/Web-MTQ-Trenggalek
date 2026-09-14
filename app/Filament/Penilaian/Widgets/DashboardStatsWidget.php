@@ -31,7 +31,7 @@ class DashboardStatsWidget extends Widget
             ['class' => \App\Filament\Penilaian\Resources\NilaiDuapuluhJuzResource::class, 'table' => 'nilai_duapuluh_juzs', 'label' => 'MHQ 20 Juz', 'slug' => 'duapuluhjuz'],
             ['class' => \App\Filament\Penilaian\Resources\NilaiTigapuluhJuzResource::class, 'table' => 'nilai_tigapuluh_juzs', 'label' => 'MHQ 30 Juz', 'slug' => 'tigapuluhjuz'],
             ['class' => \App\Filament\Penilaian\Resources\NilaiMfqResource::class, 'table' => 'nilai_mfqs', 'label' => 'MFQ', 'slug' => 'mfq', 'is_grup' => true],
-            ['class' => \App\Filament\Penilaian\Resources\NilaiMmqResource::class, 'table' => 'nilai_mmqs', 'label' => 'MMQ', 'slug' => 'mmq'],
+            ['class' => \App\Filament\Penilaian\Resources\NilaiMmqResource::class, 'table' => 'nilai_mmqs', 'label' => 'KTIQ', 'slug' => 'mmq'],
             ['class' => \App\Filament\Penilaian\Resources\NilaiMsqResource::class, 'table' => 'nilai_msqs', 'label' => 'MSQ', 'slug' => 'msq'],
             ['class' => \App\Filament\Penilaian\Resources\NilaiNaskahResource::class, 'table' => 'nilai_naskahs', 'label' => 'MKQ Naskah', 'slug' => 'naskah'],
             ['class' => \App\Filament\Penilaian\Resources\NilaiDekorasiResource::class, 'table' => 'nilai_dekorasis', 'label' => 'MKQ Dekorasi', 'slug' => 'dekorasi'],

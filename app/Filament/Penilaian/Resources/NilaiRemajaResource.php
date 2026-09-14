@@ -190,6 +190,7 @@ class NilaiRemajaResource extends Resource
                         }
                     }),
             ])
+            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('remaja'),
                 // ExportAction::make()

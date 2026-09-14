@@ -80,6 +80,7 @@ class NilaiMfqResource extends Resource
                         }
                     }),
             ])
+            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('mfq'),
                 ExportAction::make()

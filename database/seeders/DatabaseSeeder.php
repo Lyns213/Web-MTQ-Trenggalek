@@ -250,7 +250,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         User::create([
-            'name' => 'MKQ Hiasan',
+            'name' => 'MKQ Hiasan Mushaf',
             'email' => 'mkqhiasan@penilaian.com',
             'password' => Hash::make('hiasan13'),
             'role' => 'user',
@@ -277,7 +277,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         User::create([
-            'name' => 'MMQ',
+            'name' => 'KTIQ',
             'email' => 'mmq@penilaian.com',
             'password' => Hash::make('mmq16'),
             'role' => 'user',
