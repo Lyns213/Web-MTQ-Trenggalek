@@ -281,22 +281,46 @@ class LiveScoreController extends Controller
             ];
         }
 
+        $extractFields = function($record) use ($cfg) {
+            $fieldsData = [];
+            foreach ($cfg['fields'] as $f) {
+                $val = (float)($record->{$f['key']} ?? 0);
+                $max = $f['max'] ?? 100;
+                $pct = min(100, max(0, ($val / $max) * 100));
+                $fieldsData[] = [
+                    'key' => $f['key'],
+                    'label' => $f['label'],
+                    'value' => $val,
+                    'max' => $max,
+                    'pct' => $pct,
+                ];
+            }
+            return $fieldsData;
+        };
+
         $isGrup = !empty($cfg['is_grup']);
-        $participants = $records->map(function ($r) use ($isGrup) {
+        $participants = $records->map(function ($r) use ($isGrup, $cfg, $extractFields) {
             if ($isGrup) {
                 $nama = $r->grup?->nama ?? 'Grup';
                 $no = 'GRUP';
                 $kec = $r->grup?->utusan?->kecamatan ?? '-';
+                $cabang = $r->grup?->peserta?->first()?->cabang?->nama_cabang ?? $cfg['label'];
+                $pasfoto = null;
             } else {
                 $nama = $r->peserta?->nama ?? '-';
                 $no = $r->peserta?->no_peserta ?? '-';
                 $kec = $r->peserta?->utusan?->kecamatan ?? $r->peserta?->tempat_lahir ?? '-';
+                $cabang = $r->peserta?->cabang?->nama_cabang ?? $cfg['label'];
+                $pasfoto = $r->peserta?->pasfoto ? asset('storage/' . $r->peserta->pasfoto) : null;
             }
             return [
                 'id' => $r->id,
                 'nama' => $nama,
                 'no_peserta' => $no,
                 'kecamatan' => strtoupper($kec),
+                'cabang' => strtoupper($cabang),
+                'pasfoto' => $pasfoto,
+                'fields' => $extractFields($r),
                 'total' => (float)($r->total ?? 0),
             ];
         })->values()->all();

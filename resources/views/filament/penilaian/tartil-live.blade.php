@@ -86,6 +86,7 @@
             object-fit: cover;
             object-position: center 15%;
             display: block;
+            transition: opacity 0.25s ease;
         }
 
         .participant-photo-placeholder {
@@ -97,6 +98,7 @@
             background: linear-gradient(135deg, #0a1f35, #143557);
             color: #d4af37;
             font-size: 76px;
+            transition: opacity 0.25s ease;
         }
 
         .participant-navy-box {
@@ -131,6 +133,7 @@
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            transition: opacity 0.2s ease;
         }
 
         .participant-sep {
@@ -146,6 +149,7 @@
             color: #e5b958;
             letter-spacing: 1.2px;
             text-transform: uppercase;
+            transition: opacity 0.2s ease;
         }
 
         .participant-white-box {
@@ -165,6 +169,7 @@
             line-height: 1.25;
             text-align: left;
             align-items: flex-start;
+            transition: opacity 0.2s ease;
         }
 
         .origin-label {
@@ -557,7 +562,7 @@
             border: 1px solid rgba(255, 255, 255, 0.07);
             border-radius: 10px;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
             position: relative;
         }
 
@@ -725,10 +730,10 @@
     <div class="card-participant">
         <div class="participant-photo-wrap">
             @if($curr && !empty($curr['pasfoto']))
-                <img src="{{ $curr['pasfoto'] }}" id="pPhoto" class="participant-photo" alt="{{ $curr['nama'] }}">
+                <img src="{{ $curr['pasfoto'] }}" id="pPhoto" class="participant-photo" alt="{{ $curr['nama'] }}" onerror="this.style.display='none'; document.getElementById('pPhotoPh').style.display='flex';">
                 <div id="pPhotoPh" class="participant-photo-placeholder" style="display: none;">👤</div>
             @else
-                <img src="" id="pPhoto" class="participant-photo" alt="" style="display: none;">
+                <img src="" id="pPhoto" class="participant-photo" alt="" style="display: none;" onerror="this.style.display='none'; document.getElementById('pPhotoPh').style.display='flex';">
                 <div id="pPhotoPh" class="participant-photo-placeholder">👤</div>
             @endif
         </div>
@@ -824,7 +829,7 @@
                         elseif ($idx === 2) $rankClass = 'bronze';
                     }
                 @endphp
-                <div class="lb-item {{ $isCur ? 'active' : '' }}" onclick="selectParticipant({{ $p['id'] }})">
+                <div class="lb-item {{ $isCur ? 'active' : '' }}" data-id="{{ $p['id'] }}" onclick="selectParticipant({{ $p['id'] }})">
                     <div class="lb-rank {{ $rankClass }}">{{ $idx + 1 }}</div>
                     <div class="lb-info">
                         <div class="lb-name" title="{{ $p['nama'] }}">{{ $p['nama'] }}</div>
@@ -1010,21 +1015,120 @@ function updateTimerDisplay(remaining, isRunning) {
     }
 }
 
+let pauseResumeTimeout = null;
+let fetchSequence = 0;
+let pollTimer = null;
+
+function restartPollTimer() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(function() {
+        fetchData(currentId);
+    }, 2500);
+}
+
+function highlightActiveLeaderboard(id) {
+    var list = document.getElementById('lbList');
+    if (!list) return;
+
+    var items = list.querySelectorAll('.lb-item');
+    var activeEl = null;
+
+    items.forEach(function(item) {
+        var itemId = parseInt(item.getAttribute('data-id'), 10);
+        var isCur = (itemId === id);
+        item.classList.toggle('active', isCur);
+
+        var liveTag = item.querySelector('.lb-live-tag');
+        if (isCur) {
+            activeEl = item;
+            if (!liveTag) {
+                var scoreWrap = item.querySelector('.lb-score-wrap');
+                if (scoreWrap) {
+                    var tag = document.createElement('span');
+                    tag.className = 'lb-live-tag';
+                    tag.innerHTML = '&bull; TAMPIL';
+                    scoreWrap.appendChild(tag);
+                }
+            }
+        } else if (liveTag) {
+            liveTag.remove();
+        }
+    });
+
+    if (activeEl) {
+        lastActiveId = id;
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
 function setLeaderboardSort(mode) {
     lbSortMode = mode;
     var tabRank = document.getElementById('tabRank');
     var tabOrder = document.getElementById('tabOrder');
     if (tabRank) tabRank.classList.toggle('active', mode === 'rank');
     if (tabOrder) tabOrder.classList.toggle('active', mode === 'order');
-    renderLeaderboard(allParticipantsData);
+    renderLeaderboard(allParticipantsData, true);
 }
 
 function selectParticipant(id) {
-    if (!id || id === currentId) return;
-    currentId = id;
-    window.history.pushState({}, '', '/live/' + currentSlug + '/' + id);
+    if (!id || id == currentId) return;
 
-    // Ganti peserta: reset timer lokal ke total waktu peserta
+    // 1. Jeda auto scroll saat operator/user memilih peserta agar tidak beradu dengan smooth scroll
+    isPaused = true;
+    if (pauseResumeTimeout) clearTimeout(pauseResumeTimeout);
+    pauseResumeTimeout = setTimeout(function() {
+        isPaused = false;
+    }, 8000);
+
+    currentId = Number(id);
+    window.history.pushState({}, '', '/live/' + currentSlug + '/' + currentId);
+
+    // 2. Update nextId & prevId seketika dari daftar peserta
+    var currentIndex = (allParticipantsData || []).findIndex(function(p) { return p.id == currentId; });
+    if (currentIndex !== -1) {
+        prevId = currentIndex > 0 ? allParticipantsData[currentIndex - 1].id : null;
+        nextId = currentIndex < allParticipantsData.length - 1 ? allParticipantsData[currentIndex + 1].id : null;
+    }
+
+    // 3. Langsung beri respon visual pada tabel klasemen (0ms delay)
+    highlightActiveLeaderboard(currentId);
+
+    // 4. Update data peserta seketika dari memory cache (foto, nama, nomor, asal, cabang, nilai)
+    var pData = (allParticipantsData || []).find(function(p) { return p.id == currentId; });
+    if (pData) {
+        var pNameEl = document.getElementById('pName');
+        var pNumberEl = document.getElementById('pNumber');
+        var pOriginEl = document.getElementById('pOrigin');
+        var sTotalEl = document.getElementById('sTotal');
+        var photoEl = document.getElementById('pPhoto');
+        var photoPh = document.getElementById('pPhotoPh');
+        var cabangTitleEl = document.getElementById('cabangTitle');
+
+        if (pNameEl) pNameEl.textContent = pData.nama || '-';
+        if (pNumberEl) pNumberEl.textContent = pData.no_peserta || '-';
+        if (pOriginEl) pOriginEl.textContent = pData.kecamatan || '-';
+        if (sTotalEl) sTotalEl.textContent = Number(pData.total || 0).toFixed(2);
+
+        if (pData.cabang && cabangTitleEl) {
+            cabangTitleEl.innerHTML = '<span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG ' + pData.cabang + ')</span>';
+        }
+
+        if (pData.pasfoto) {
+            photoEl.src = pData.pasfoto;
+            photoEl.style.display = 'block';
+            photoEl.style.opacity = '1';
+            if (photoPh) photoPh.style.display = 'none';
+        } else {
+            photoEl.style.display = 'none';
+            if (photoPh) photoPh.style.display = 'flex';
+        }
+
+        if (pData.fields && pData.fields.length > 0) {
+            renderFields(pData.fields);
+        }
+    }
+
+    // 5. Ganti peserta: reset timer lokal ke total waktu peserta
     isTimerRunning = false;
     timerSeconds = totalTimerSeconds;
     timerInitialAtStart = totalTimerSeconds;
@@ -1032,10 +1136,14 @@ function selectParticipant(id) {
     playedEndSound = false;
     updateTimerDisplay(totalTimerSeconds, false);
 
-    fetchData();
+    // 6. Reset interval polling agar tidak terjadi bentrokan request
+    restartPollTimer();
+
+    // 7. Ambil data sinkronisasi timer & status terbaru dari server
+    fetchData(currentId);
 }
 
-function renderLeaderboard(participants) {
+function renderLeaderboard(participants, forceRebuild) {
     if (participants) {
         allParticipantsData = participants;
     }
@@ -1060,39 +1168,104 @@ function renderLeaderboard(participants) {
         });
     }
 
-    var html = '';
-    var sudahCount = 0;
-    list.forEach(function(p, idx) {
-        var isCurrent = (p.id === currentId);
-        var rankClass = '';
-        var hasScore = (p.total && Number(p.total) > 0);
-        if (hasScore) {
-            sudahCount++;
-            if (lbSortMode === 'rank') {
-                if (idx === 0) rankClass = 'gold';
-                else if (idx === 1) rankClass = 'silver';
-                else if (idx === 2) rankClass = 'bronze';
+    var existingItems = container.querySelectorAll('.lb-item');
+    var isSameStructure = (!forceRebuild && existingItems.length === list.length);
+    if (isSameStructure) {
+        for (var k = 0; k < list.length; k++) {
+            if (parseInt(existingItems[k].getAttribute('data-id'), 10) !== list[k].id) {
+                isSameStructure = false;
+                break;
             }
         }
+    }
 
-        var scoreDisplay = hasScore
-            ? '<span class="lb-score-val">' + Number(p.total).toFixed(2) + '</span>'
-            : '<span class="lb-score-empty"></span>';
+    var sudahCount = 0;
 
-        html += '<div class="lb-item ' + (isCurrent ? 'active' : '') + '" onclick="selectParticipant(' + p.id + ')">' +
-            '<div class="lb-rank ' + rankClass + '">' + (idx + 1) + '</div>' +
-            '<div class="lb-info">' +
-                '<div class="lb-name" title="' + (p.nama || '-') + '">' + (p.nama || '-') + '</div>' +
-                '<div class="lb-meta">No. ' + (p.no_peserta || '-') + ' &bull; ' + (p.kecamatan || '-') + '</div>' +
-            '</div>' +
-            '<div class="lb-score-wrap">' +
-                scoreDisplay +
-                (isCurrent ? '<span class="lb-live-tag">&bull; TAMPIL</span>' : '') +
-            '</div>' +
-        '</div>';
-    });
+    if (isSameStructure) {
+        // Smooth in-place update: Jangan hapus/buat ulang DOM agar scroll & hover tetap mulus
+        list.forEach(function(p, idx) {
+            var item = existingItems[idx];
+            var isCurrent = (p.id === currentId);
+            var hasScore = (p.total && Number(p.total) > 0);
+            if (hasScore) sudahCount++;
 
-    container.innerHTML = html;
+            item.classList.toggle('active', isCurrent);
+
+            // Update rank badge class
+            var rankEl = item.querySelector('.lb-rank');
+            if (rankEl) {
+                rankEl.className = 'lb-rank';
+                if (hasScore && lbSortMode === 'rank') {
+                    if (idx === 0) rankEl.classList.add('gold');
+                    else if (idx === 1) rankEl.classList.add('silver');
+                    else if (idx === 2) rankEl.classList.add('bronze');
+                }
+                rankEl.textContent = (idx + 1);
+            }
+
+            // Update score
+            var scoreWrap = item.querySelector('.lb-score-wrap');
+            if (scoreWrap) {
+                var scoreValEl = scoreWrap.querySelector('.lb-score-val');
+                var scoreEmptyEl = scoreWrap.querySelector('.lb-score-empty');
+                var liveTag = scoreWrap.querySelector('.lb-live-tag');
+
+                if (hasScore) {
+                    var fmt = Number(p.total).toFixed(2);
+                    if (scoreValEl) {
+                        if (scoreValEl.textContent !== fmt) scoreValEl.textContent = fmt;
+                    } else if (scoreEmptyEl) {
+                        scoreEmptyEl.outerHTML = '<span class="lb-score-val">' + fmt + '</span>';
+                    }
+                } else if (scoreValEl) {
+                    scoreValEl.outerHTML = '<span class="lb-score-empty"></span>';
+                }
+
+                if (isCurrent && !liveTag) {
+                    var tag = document.createElement('span');
+                    tag.className = 'lb-live-tag';
+                    tag.innerHTML = '&bull; TAMPIL';
+                    scoreWrap.appendChild(tag);
+                } else if (!isCurrent && liveTag) {
+                    liveTag.remove();
+                }
+            }
+        });
+    } else {
+        // Rebuild DOM only when structure or sort order changed
+        var html = '';
+        list.forEach(function(p, idx) {
+            var isCurrent = (p.id === currentId);
+            var rankClass = '';
+            var hasScore = (p.total && Number(p.total) > 0);
+            if (hasScore) {
+                sudahCount++;
+                if (lbSortMode === 'rank') {
+                    if (idx === 0) rankClass = 'gold';
+                    else if (idx === 1) rankClass = 'silver';
+                    else if (idx === 2) rankClass = 'bronze';
+                }
+            }
+
+            var scoreDisplay = hasScore
+                ? '<span class="lb-score-val">' + Number(p.total).toFixed(2) + '</span>'
+                : '<span class="lb-score-empty"></span>';
+
+            html += '<div class="lb-item ' + (isCurrent ? 'active' : '') + '" data-id="' + p.id + '" onclick="selectParticipant(' + p.id + ')">' +
+                '<div class="lb-rank ' + rankClass + '">' + (idx + 1) + '</div>' +
+                '<div class="lb-info">' +
+                    '<div class="lb-name" title="' + (p.nama || '-') + '">' + (p.nama || '-') + '</div>' +
+                    '<div class="lb-meta">No. ' + (p.no_peserta || '-') + ' &bull; ' + (p.kecamatan || '-') + '</div>' +
+                '</div>' +
+                '<div class="lb-score-wrap">' +
+                    scoreDisplay +
+                    (isCurrent ? '<span class="lb-live-tag">&bull; TAMPIL</span>' : '') +
+                '</div>' +
+            '</div>';
+        });
+
+        container.innerHTML = html;
+    }
 
     var countEl = document.getElementById('lbTotalCount');
     if (countEl) {
@@ -1161,6 +1334,18 @@ function fmtTime(s) {
 function renderFields(fields) {
     var container = document.getElementById('scoreFieldsContainer');
     if (!container || !fields || fields.length === 0) return;
+
+    var existingRows = container.querySelectorAll('.score-field');
+    if (existingRows.length === fields.length) {
+        fields.forEach(function(f, idx) {
+            var valEl = document.getElementById('sVal_' + idx);
+            var barEl = document.getElementById('sBar_' + idx);
+            if (valEl) valEl.textContent = Number(f.value).toFixed(2);
+            if (barEl) barEl.style.width = f.pct + '%';
+        });
+        return;
+    }
+
     var html = '';
     fields.forEach(function(f, idx) {
         html += '<div class="score-field">' +
@@ -1177,47 +1362,49 @@ function renderFields(fields) {
 }
 
 function updateDisplay(data) {
+    if (!data || data.empty) return;
+
+    // Update currentId terlebih dahulu agar sinkron dengan leaderboard
+    currentId = Number(data.current.id);
+    nextId = data.next ? Number(data.next.id) : null;
+    prevId = data.previous ? Number(data.previous.id) : null;
+
     if (data.participants) {
         renderLeaderboard(data.participants);
+    } else {
+        highlightActiveLeaderboard(currentId);
     }
-
-    if (data.empty) {
-        document.getElementById('pName').textContent = 'BELUM ADA PESERTA';
-        document.getElementById('pNumber').textContent = '-';
-        document.getElementById('pOrigin').textContent = '-';
-        var photoEl = document.getElementById('pPhoto');
-        var photoPh = document.getElementById('pPhotoPh');
-        photoEl.style.display = 'none';
-        photoPh.style.display = 'flex';
-
-        if (data.cabang) {
-            document.getElementById('cabangTitle').innerHTML = '<span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG ' + data.cabang + ')</span>';
-        }
-        if (data.fields && data.fields.length > 0) {
-            renderFields(data.fields);
-        }
-        document.getElementById('sTotal').textContent = '0.00';
-        return;
-    }
-
-    currentId = data.current.id;
-    nextId = data.next ? data.next.id : null;
-    prevId = data.previous ? data.previous.id : null;
 
     var photoEl = document.getElementById('pPhoto');
     var photoPh = document.getElementById('pPhotoPh');
     if (data.current.pasfoto) {
-        photoEl.src = data.current.pasfoto;
+        if (photoEl.src !== data.current.pasfoto) {
+            photoEl.src = data.current.pasfoto;
+        }
         photoEl.style.display = 'block';
-        photoPh.style.display = 'none';
+        photoEl.style.opacity = '1';
+        if (photoPh) photoPh.style.display = 'none';
     } else {
         photoEl.style.display = 'none';
-        photoPh.style.display = 'flex';
+        if (photoPh) {
+            photoPh.style.display = 'flex';
+            photoPh.style.opacity = '1';
+        }
     }
 
-    document.getElementById('pName').textContent = data.current.nama || '-';
-    document.getElementById('pNumber').textContent = data.current.no_peserta || '-';
-    document.getElementById('pOrigin').textContent = data.current.kecamatan || data.current.tempat_lahir || '-';
+    var pNameEl = document.getElementById('pName');
+    var pNumberEl = document.getElementById('pNumber');
+    var pOriginEl = document.getElementById('pOrigin');
+
+    if (pNameEl) {
+        pNameEl.textContent = data.current.nama || '-';
+        pNameEl.style.opacity = '1';
+    }
+    if (pNumberEl) pNumberEl.textContent = data.current.no_peserta || '-';
+    if (pOriginEl) {
+        pOriginEl.textContent = data.current.kecamatan || data.current.tempat_lahir || '-';
+        pOriginEl.style.opacity = '1';
+    }
 
     if (data.current.cabang) {
         document.getElementById('cabangTitle').innerHTML = '<span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG ' + data.current.cabang + ')</span>';
@@ -1255,11 +1442,19 @@ function tickTimer() {
     }
 }
 
-function fetchData() {
-    var url = '/live/' + currentSlug + '/data' + (currentId ? ('/' + currentId) : '');
+function fetchData(forcedId) {
+    var reqSeq = ++fetchSequence;
+    var targetId = (forcedId !== undefined && forcedId !== null) ? Number(forcedId) : Number(currentId);
+    var url = '/live/' + currentSlug + '/data' + (targetId ? ('/' + targetId) : '');
+
     fetch(url)
         .then(function(res) { return res.json(); })
         .then(function(data) {
+            if (!data || data.empty) return;
+            // Abaikan respons request lama jika ada request yang lebih baru
+            if (reqSeq !== fetchSequence) return;
+            if (targetId && data.current && Number(data.current.id) !== targetId) return;
+
             updateDisplay(data);
 
             if (data.timer) {
@@ -1276,7 +1471,9 @@ function fetchData() {
                 }
             }
         })
-        .catch(function(err) { console.error('Poll error:', err); });
+        .catch(function(err) {
+            console.error('Poll error:', err);
+        });
 }
 
 function navigateParticipant(direction) {
@@ -1353,7 +1550,7 @@ updateTimerDisplay(timerSeconds, isTimerRunning);
 
 fetchData();
 initAutoScroll();
-setInterval(fetchData, 2500);
+restartPollTimer();
 setInterval(function() {
     if (isTimerRunning) {
         tickTimer();

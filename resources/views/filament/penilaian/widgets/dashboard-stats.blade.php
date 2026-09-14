@@ -54,7 +54,7 @@
         {{-- Card 1: Total Peserta --}}
         <div class="penilaian-stat-card" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); transition: transform 0.2s, border-color 0.2s; position: relative;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='#d4af37';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#e2e8f0';">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                <span style="font-size: 12px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
+                <span class="stat-card-label" style="font-size: 12px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
                     TOTAL PESERTA
                 </span>
                 <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #0d2238 0%, #173d63 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(13, 34, 56, 0.25);">
@@ -67,15 +67,15 @@
                 {{ $stats['total'] }}
             </div>
             <div class="stat-footer-border" style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 8px;">
-                <span>Sudah Dinilai: <strong style="color: #059669;">{{ $stats['sudah_dinilai'] ?? 0 }}</strong></span>
-                <span>Belum: <strong style="color: #ea580c;">{{ $stats['belum_dinilai'] ?? 0 }}</strong></span>
+                <span>Sudah Dinilai: <strong style="color: #10b981;">{{ $stats['sudah_dinilai'] ?? 0 }}</strong></span>
+                <span>Belum: <strong style="color: #f59e0b;">{{ $stats['belum_dinilai'] ?? 0 }}</strong></span>
             </div>
         </div>
 
         {{-- Card 2: Peserta Putra --}}
         <div class="penilaian-stat-card" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='#10b981';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#e2e8f0';">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                <span style="font-size: 12px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
+                <span class="stat-card-label" style="font-size: 12px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
                     PESERTA PUTRA
                 </span>
                 <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);">
@@ -84,19 +84,19 @@
                     </svg>
                 </div>
             </div>
-            <div style="font-size: 38px; font-weight: 900; color: #065f46; line-height: 1; letter-spacing: -0.5px;">
+            <div class="stat-number-putra" style="font-size: 38px; font-weight: 900; color: #059669; line-height: 1; letter-spacing: -0.5px;">
                 {{ $stats['laki'] }}
             </div>
             <div class="stat-footer-border" style="margin-top: 10px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 8px;">
                 @php $putraPct = $stats['total'] > 0 ? round(($stats['laki'] / $stats['total']) * 100, 1) : 0; @endphp
-                <span>Proporsi: <strong style="color: #059669;">{{ $putraPct }}%</strong> dari total</span>
+                <span>Proporsi: <strong class="stat-text-putra" style="color: #059669;">{{ $putraPct }}%</strong> dari total</span>
             </div>
         </div>
 
         {{-- Card 3: Peserta Putri --}}
         <div class="penilaian-stat-card" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.borderColor='#e11d48';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#e2e8f0';">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                <span style="font-size: 12px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
+                <span class="stat-card-label" style="font-size: 12px; font-weight: 800; color: #64748b; letter-spacing: 1px; text-transform: uppercase;">
                     PESERTA PUTRI
                 </span>
                 <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.25);">
@@ -105,12 +105,12 @@
                     </svg>
                 </div>
             </div>
-            <div style="font-size: 38px; font-weight: 900; color: #9f1239; line-height: 1; letter-spacing: -0.5px;">
+            <div class="stat-number-putri" style="font-size: 38px; font-weight: 900; color: #e11d48; line-height: 1; letter-spacing: -0.5px;">
                 {{ $stats['perempuan'] }}
             </div>
             <div class="stat-footer-border" style="margin-top: 10px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 8px;">
                 @php $putriPct = $stats['total'] > 0 ? round(($stats['perempuan'] / $stats['total']) * 100, 1) : 0; @endphp
-                <span>Proporsi: <strong style="color: #e11d48;">{{ $putriPct }}%</strong> dari total</span>
+                <span>Proporsi: <strong class="stat-text-putri" style="color: #e11d48;">{{ $putriPct }}%</strong> dari total</span>
             </div>
         </div>
     </div>
@@ -119,7 +119,7 @@
     @if($stats['total'] > 0)
     <div class="penilaian-ratio-bar" style="margin-top: 16px; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span class="stat-number-default" style="font-size: 12px; font-weight: 800; color: #0c233c; letter-spacing: 0.8px; text-transform: uppercase;">
+            <span class="stat-title-ratio" style="font-size: 12px; font-weight: 800; color: #0c233c; letter-spacing: 0.8px; text-transform: uppercase;">
                 DISTRIBUSI GENDER PESERTA
             </span>
             <span style="font-size: 12px; font-weight: 700; color: #64748b;">
@@ -131,10 +131,10 @@
             <div style="width: {{ $putriPct }}%; background: linear-gradient(90deg, #e11d48, #f43f5e); transition: width 0.8s ease;" title="Putri: {{ $putriPct }}%"></div>
         </div>
         <div style="display: flex; justify-content: space-between; margin-top: 8px;">
-            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #059669;">
+            <span class="stat-text-putra" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #059669;">
                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span> Putra: {{ $stats['laki'] }} ({{ $putraPct }}%)
             </span>
-            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #e11d48;">
+            <span class="stat-text-putri" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #e11d48;">
                 <span style="width: 8px; height: 8px; border-radius: 50%; background: #f43f5e;"></span> Putri: {{ $stats['perempuan'] }} ({{ $putriPct }}%)
             </span>
         </div>

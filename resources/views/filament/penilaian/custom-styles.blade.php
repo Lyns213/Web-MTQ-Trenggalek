@@ -513,8 +513,35 @@ html.dark .fi-panel-penilaian .penilaian-stat-card .stat-number-default {
     color: #f8fafc !important;
 }
 
+html.dark .fi-panel-penilaian .stat-number-putra {
+    color: #34d399 !important;
+    text-shadow: 0 0 16px rgba(52, 211, 153, 0.4) !important;
+}
+
+html.dark .fi-panel-penilaian .stat-text-putra {
+    color: #34d399 !important;
+}
+
+html.dark .fi-panel-penilaian .stat-number-putri {
+    color: #fb7185 !important;
+    text-shadow: 0 0 16px rgba(251, 113, 133, 0.4) !important;
+}
+
+html.dark .fi-panel-penilaian .stat-text-putri {
+    color: #fb7185 !important;
+}
+
+html.dark .fi-panel-penilaian .stat-title-ratio {
+    color: #f8fafc !important;
+}
+
+html.dark .fi-panel-penilaian .penilaian-stat-card .stat-card-label {
+    color: #94a3b8 !important;
+}
+
 html.dark .fi-panel-penilaian .penilaian-stat-card .stat-footer-border {
     border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #94a3b8 !important;
 }
 
 html.dark .fi-panel-penilaian .penilaian-menu-card .menu-card-title {
