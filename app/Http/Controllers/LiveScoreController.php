@@ -370,6 +370,10 @@ class LiveScoreController extends Controller
             $elapsed = time() - $timerState['started_at'];
             $timerState['remaining_seconds'] = max(0, $timerState['remaining_seconds'] - $elapsed);
             $timerState['started_at'] = time();
+            if ($timerState['remaining_seconds'] <= 0) {
+                $timerState['is_running'] = false;
+                $timerState['started_at'] = null;
+            }
             Cache::put($cacheKey, $timerState, 3600);
         }
 
@@ -436,19 +440,29 @@ class LiveScoreController extends Controller
         if (!$id) return response()->json(['error' => 'No ID'], 400);
 
         $slug = strtolower($slug);
+        $cfg = self::$config[$slug] ?? self::$config['tartil'];
         $cacheKey = 'mtq_timer_' . $slug . '_' . $id;
         $timerState = Cache::get($cacheKey);
 
         if (!$timerState) {
-            return response()->json(['error' => 'Timer not initialized'], 404);
+            $defaultTimer = $cfg['timer'] ?? '00:05:00';
+            $parts = explode(':', $defaultTimer);
+            $totalSeconds = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
+            $timerState = [
+                'total_seconds' => $totalSeconds,
+                'remaining_seconds' => $totalSeconds,
+                'is_running' => false,
+                'started_at' => null,
+            ];
         }
 
         if ($action === 'start') {
-            if ($timerState['remaining_seconds'] > 0) {
-                $timerState['is_running'] = true;
-                $timerState['started_at'] = time();
-                Cache::put($cacheKey, $timerState, 3600);
+            if ($timerState['remaining_seconds'] <= 0) {
+                $timerState['remaining_seconds'] = $timerState['total_seconds'];
             }
+            $timerState['is_running'] = true;
+            $timerState['started_at'] = time();
+            Cache::put($cacheKey, $timerState, 3600);
         } elseif ($action === 'pause') {
             if ($timerState['is_running'] && $timerState['started_at']) {
                 $elapsed = time() - $timerState['started_at'];
@@ -464,6 +478,13 @@ class LiveScoreController extends Controller
             Cache::put($cacheKey, $timerState, 3600);
         }
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'timer' => [
+                'remaining' => $timerState['remaining_seconds'],
+                'total' => $timerState['total_seconds'],
+                'is_running' => $timerState['is_running'],
+            ],
+        ]);
     }
 }
