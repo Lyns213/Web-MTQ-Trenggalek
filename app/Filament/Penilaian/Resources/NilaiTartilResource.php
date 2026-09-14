@@ -44,13 +44,13 @@ class NilaiTartilResource extends Resource
                     Section::make([
                         TextInput::make('peserta_id')
                             ->label(__('Nama'))
-                            ->live(onBlur: true)
                             ->disabled()
+                            ->dehydrated(false)
                             ->formatStateUsing(fn(NilaiTartil $record): string => $record->peserta->nama ?? ''),
                         TextInput::make('tajwid')
                             ->numeric()
                             ->default(0)
-                            ->live(onBlur: true)
+                            ->live(debounce: 500)
                             ->maxValue(40)
                             ->helperText(new HtmlString('<strong>Petunjuk :</strong> Input nilai maksimal 40'))
                             ->afterStateUpdated(function ($state, callable $set, Get $get) {
@@ -69,7 +69,7 @@ class NilaiTartilResource extends Resource
                         TextInput::make('irama_dan_suara')
                             ->numeric()
                             ->default(0)
-                            ->live(onBlur: true)
+                            ->live(debounce: 500)
                             ->maxValue(30)
                             ->helperText(new HtmlString('<strong>Petunjuk :</strong> Input nilai maksimal 30'))
                             ->afterStateUpdated(function ($state, callable $set, Get $get) {
@@ -88,7 +88,7 @@ class NilaiTartilResource extends Resource
                         TextInput::make('fashahah')
                             ->numeric()
                             ->default(0)
-                            ->live(onBlur: true)
+                            ->live(debounce: 500)
                             ->maxValue(30)
                             ->helperText(new HtmlString('<strong>Petunjuk :</strong> Input nilai maksimal 30'))
                             ->afterStateUpdated(function ($state, callable $set, Get $get) {
@@ -108,9 +108,7 @@ class NilaiTartilResource extends Resource
                     Section::make([
                         TextInput::make('total')
                             ->numeric()
-                            ->readOnly()
-                            ->live(onBlur: true)
-                            ->reactive(),
+                            ->readOnly(),
                     ]),
                 ])
                 ->from('md')
@@ -186,7 +184,6 @@ class NilaiTartilResource extends Resource
             ->actions([
             ])
             ->paginated(false)
-            ->poll('1s')
             ->defaultSort('final_bobot', 'desc')
             ->filters([
                 SelectFilter::make('peserta.jenis_kelamin')
@@ -228,13 +225,24 @@ class NilaiTartilResource extends Resource
                     ->tooltip(fn ($record) => ($record->total == 0 || $record->total == null) ? 'Input Nilai' : 'Lihat Nilai')
                     ->icon(fn ($record) => ($record->total == 0 || $record->total == null) ? 'heroicon-o-plus' : 'heroicon-o-eye')
                     ->color(fn ($record) => ($record->total == 0 || $record->total == null) ? 'success' : 'info')
-                    ->after(function ($data, $record) {
-                        $record->bobot_total = $record->total * 100000000;
-                        $record->bobot_tajwid = $record->tajwid * 1000000;
-                        $record->bobot_irama_dan_suara = $record->irama_dan_suara * 10000;
-                        $record->bobot_fashahah = $record->fashahah * 100;
+                    ->using(function (NilaiTartil $record, array $data): NilaiTartil {
+                        $tajwid = floatval($data['tajwid'] ?? 0);
+                        $irama = floatval($data['irama_dan_suara'] ?? 0);
+                        $fashahah = floatval($data['fashahah'] ?? 0);
+                        $total = $tajwid + $irama + $fashahah;
+
+                        $record->tajwid = $tajwid;
+                        $record->irama_dan_suara = $irama;
+                        $record->fashahah = $fashahah;
+                        $record->total = $total;
+                        $record->bobot_total = $total * 100000000;
+                        $record->bobot_tajwid = $tajwid * 1000000;
+                        $record->bobot_irama_dan_suara = $irama * 10000;
+                        $record->bobot_fashahah = $fashahah * 100;
                         $record->final_bobot = $record->bobot_tajwid + $record->bobot_irama_dan_suara + $record->bobot_fashahah + $record->bobot_total;
                         $record->save();
+
+                        return $record;
                     })
                     ->modalHeading('Input Nilai')
                     ->modalDescription('Pastikan input nilai dengan tepat, karena kesempatan mengisi hanya sekali'),
