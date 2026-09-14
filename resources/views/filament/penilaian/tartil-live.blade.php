@@ -882,22 +882,105 @@ let isPaused = false;
 let autoScrollTimer = null;
 let lastActiveId = null;
 
-// Audio resources
-const startAudio = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
-const midAudio = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
-const endAudio = new Audio('{{ asset("sounds/mtqend.mp3") }}');
+// Audio System with MP3 + Electronic "Teeet" Buzzer
+let audioCtx = null;
+
+function getAudioContext() {
+    if (!audioCtx) {
+        var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtxClass) {
+            audioCtx = new AudioCtxClass();
+        }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(function() {});
+    }
+    return audioCtx;
+}
+
+function unlockAudioSystem() {
+    getAudioContext();
+}
+
+['click', 'touchstart', 'keydown', 'mousedown'].forEach(function(evt) {
+    document.addEventListener(evt, unlockAudioSystem, { capture: true, passive: true });
+});
+
+// Electronic "Teeet" Buzzer Sound Generator
+function playTeetBuzzer(duration) {
+    try {
+        var ctx = getAudioContext();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(function() {});
+        }
+        var now = ctx.currentTime;
+        var dur = duration || 0.4;
+
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+
+        osc.type = 'square'; // 'square' gives crisp digital timer "teeet" buzzer sound
+        osc.frequency.setValueAtTime(950, now); // 950Hz electronic beep
+
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.setValueAtTime(0.4, now + dur - 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + dur);
+    } catch(e) {
+        console.warn('Buzzer error:', e);
+    }
+}
 
 let playedMidSound = timerSeconds <= 60 && timerSeconds > 0;
 let playedEndSound = timerSeconds <= 0;
 
-function playAudio(audio) {
-    try {
-        audio.currentTime = 0;
-        var p = audio.play();
+function playSingleSound(type) {
+    unlockAudioSystem();
+
+    var mp3Name = type === 'start' ? 'mtqstart.mp3' : (type === 'mid' ? 'mtqmid.mp3' : 'mtqend.mp3');
+    var paths = [
+        '{{ asset("sounds/") }}/' + mp3Name,
+        '{{ url("sounds/") }}/' + mp3Name,
+        '/sounds/' + mp3Name,
+        'sounds/' + mp3Name
+    ];
+
+    function tryPath(i) {
+        if (i >= paths.length) return;
+        var a = new Audio(paths[i]);
+        a.volume = 1.0;
+        var p = a.play();
         if (p !== undefined) {
-            p.catch(function(err) { console.warn('Audio play prevented:', err); });
+            p.catch(function() {
+                tryPath(i + 1);
+            });
         }
-    } catch(e) {}
+    }
+    tryPath(0);
+
+    // Play "teeet" electronic buzzer
+    var dur = type === 'end' ? 0.6 : 0.35;
+    playTeetBuzzer(dur);
+}
+
+function playBeeps(count, type) {
+    unlockAudioSystem();
+    let current = 0;
+    function playOne() {
+        if (current >= count) return;
+        playSingleSound(type);
+        current++;
+        if (current < count) {
+            setTimeout(playOne, 350); // 350ms gap between "teeet" beeps
+        }
+    }
+    playOne();
 }
 
 function getRemainingSeconds() {
@@ -1153,13 +1236,13 @@ function tickTimer() {
     timerSeconds = remaining;
     updateTimerDisplay(remaining, true);
 
-    // Rule 5: 1 menit sebelum selesai kasih bunyi sound
+    // Rule 5: 1 menit sebelum selesai (2 bel)
     if (remaining <= 60 && remaining > 0 && !playedMidSound) {
         playedMidSound = true;
-        playAudio(midAudio);
+        playBeeps(2, 'mid');
     }
 
-    // Rule 6: ketika selesai menit 0 kasih sound teet dan STOP di 00:00 (JANGAN RESET OTOMATIS)
+    // Rule 6: ketika selesai 00:00 (3 bel) dan STOP di 00:00
     if (remaining <= 0) {
         isTimerRunning = false;
         timerSeconds = 0;
@@ -1167,7 +1250,7 @@ function tickTimer() {
         updateTimerDisplay(0, false);
         if (!playedEndSound) {
             playedEndSound = true;
-            playAudio(endAudio);
+            playBeeps(3, 'end');
         }
     }
 }
@@ -1217,7 +1300,7 @@ function toggleTimer() {
         timerStartedAt = Date.now();
         timerInitialAtStart = timerSeconds;
         updateTimerDisplay(timerSeconds, true);
-        playAudio(startAudio); // Rule 4: bunyi sound saat start
+        playBeeps(1, 'start'); // 1 bel saat mulai
         fetch('/live/' + currentSlug + '/timer/start?id=' + currentId);
     } else {
         // Pause
