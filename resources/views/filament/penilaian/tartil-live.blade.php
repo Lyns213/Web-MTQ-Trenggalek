@@ -239,12 +239,36 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 52px;
             font-weight: 800;
-            color: #ffffff;
+            color: #ffe082;
             margin-left: 12px;
             font-variant-numeric: tabular-nums;
             letter-spacing: 1px;
             line-height: 1;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.25);
+            text-shadow: 0 0 18px rgba(255, 224, 130, 0.65), 0 0 35px rgba(212, 175, 55, 0.4);
+            transition: color 0.25s ease, text-shadow 0.25s ease;
+        }
+
+        .timer-digits.timer-yellow {
+            color: #ffe082 !important;
+            text-shadow: 0 0 18px rgba(255, 224, 130, 0.65), 0 0 35px rgba(212, 175, 55, 0.4) !important;
+            animation: none !important;
+        }
+
+        .timer-digits.timer-green {
+            color: #00e676 !important;
+            text-shadow: 0 0 18px rgba(0, 230, 118, 0.75), 0 0 35px rgba(0, 230, 118, 0.45) !important;
+            animation: none !important;
+        }
+
+        .timer-digits.timer-red {
+            color: #ff334b !important;
+            text-shadow: 0 0 20px rgba(255, 51, 75, 0.85), 0 0 38px rgba(255, 51, 75, 0.5) !important;
+            animation: pulse-timer-red 1s infinite alternate ease-in-out !important;
+        }
+
+        @keyframes pulse-timer-red {
+            from { transform: scale(1); }
+            to { transform: scale(1.03); }
         }
 
         .badge-live-top {
@@ -726,7 +750,7 @@
         <div class="score-header-row">
             <div class="timer-group">
                 <span class="timer-text-label">WAKTU TERSISA:</span>
-                <span class="timer-digits" id="timerVal">{{ $timer['formatted'] ?? '05:00' }}</span>
+                <span class="timer-digits timer-yellow" id="timerVal">{{ $timer['formatted'] ?? '05:00' }}</span>
             </div>
             <div class="badge-live-top">
                 <span class="dot-blink"></span> LIVE
@@ -846,6 +870,7 @@ let currentId = {{ $curr['id'] ?? 'null' }};
 let nextId = {{ $initialData['next']['id'] ?? 'null' }};
 let prevId = {{ $initialData['previous']['id'] ?? 'null' }};
 let srvRem = {{ $timer['remaining'] ?? 300 }};
+let srvTotal = {{ $timer['total'] ?? 300 }};
 let srvRun = {{ ($timer['is_running'] ?? false) ? 'true' : 'false' }};
 let lastUpd = Math.floor(Date.now() / 1000);
 let allParticipantsData = @json($participants);
@@ -855,6 +880,49 @@ let isHovered = false;
 let isPaused = false;
 let autoScrollTimer = null;
 let lastActiveId = null;
+
+// Audio resources
+const startAudio = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
+const midAudio = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
+const endAudio = new Audio('{{ asset("sounds/mtqend.mp3") }}');
+
+let playedMidSound = srvRem <= 60 && srvRem > 0;
+let playedEndSound = srvRem <= 0;
+
+function playAudio(audio) {
+    try {
+        audio.currentTime = 0;
+        var p = audio.play();
+        if (p !== undefined) {
+            p.catch(function(err) { console.warn('Audio play prevented:', err); });
+        }
+    } catch(e) {}
+}
+
+function getRemainingSeconds() {
+    if (!srvRun) return srvRem;
+    var elapsed = Math.floor(Date.now() / 1000) - lastUpd;
+    return Math.max(0, srvRem - elapsed);
+}
+
+function updateTimerDisplay(remaining, isRunning) {
+    var timerEl = document.getElementById('timerVal');
+    if (timerEl) {
+        timerEl.textContent = fmtTime(remaining);
+        timerEl.classList.remove('timer-yellow', 'timer-green', 'timer-red');
+        if (remaining <= 60) {
+            timerEl.classList.add('timer-red');
+        } else if (isRunning) {
+            timerEl.classList.add('timer-green');
+        } else {
+            timerEl.classList.add('timer-yellow');
+        }
+    }
+    var toggleBtn = document.getElementById('btnToggleTimer');
+    if (toggleBtn) {
+        toggleBtn.textContent = isRunning ? 'Jeda (Spasi)' : 'Mulai (Spasi)';
+    }
+}
 
 function setLeaderboardSort(mode) {
     lbSortMode = mode;
@@ -868,6 +936,8 @@ function setLeaderboardSort(mode) {
 function selectParticipant(id) {
     if (!id || id === currentId) return;
     currentId = id;
+    playedMidSound = false;
+    playedEndSound = false;
     window.history.pushState({}, '', '/live/' + currentSlug + '/' + id);
     fetchData();
 }
@@ -1068,9 +1138,24 @@ function updateDisplay(data) {
 }
 
 function tickTimer() {
-    var elapsed = Math.floor(Date.now() / 1000) - lastUpd;
-    var remaining = Math.max(0, srvRem - elapsed);
-    document.getElementById('timerVal').textContent = fmtTime(remaining);
+    if (!srvRun) return;
+    var remaining = getRemainingSeconds();
+    updateTimerDisplay(remaining, true);
+
+    // Rule 5: 1 menit sebelum selesai kasih bunyi sound
+    if (remaining <= 60 && remaining > 0 && !playedMidSound) {
+        playedMidSound = true;
+        playAudio(midAudio);
+    }
+
+    // Rule 6: ketika selesai menit 0 kasih sound teet
+    if (remaining <= 0 && !playedEndSound) {
+        playedEndSound = true;
+        srvRun = false;
+        srvRem = 0;
+        updateTimerDisplay(0, false);
+        playAudio(endAudio);
+    }
 }
 
 function fetchData() {
@@ -1080,10 +1165,19 @@ function fetchData() {
         .then(function(data) {
             updateDisplay(data);
             if (data.timer) {
-                srvRem = data.timer.remaining;
-                srvRun = data.timer.is_running;
-                lastUpd = Math.floor(Date.now() / 1000);
-                document.getElementById('timerVal').textContent = data.timer.formatted;
+                srvTotal = data.timer.total || 300;
+                var serverRem = data.timer.remaining;
+                var localRem = getRemainingSeconds();
+
+                // Reconcile timer jika beda status running atau deviasi waktu > 2 detik
+                if (srvRun !== data.timer.is_running || Math.abs(localRem - serverRem) > 2) {
+                    srvRem = serverRem;
+                    srvRun = data.timer.is_running;
+                    lastUpd = Math.floor(Date.now() / 1000);
+                    if (srvRem > 60) playedMidSound = false;
+                    if (srvRem > 0) playedEndSound = false;
+                }
+                updateTimerDisplay(getRemainingSeconds(), srvRun);
             }
         })
         .catch(function(err) { console.error('Poll error:', err); });
@@ -1093,6 +1187,8 @@ function navigateParticipant(direction) {
     var targetId = direction === 'next' ? nextId : prevId;
     if (targetId) {
         currentId = targetId;
+        playedMidSound = false;
+        playedEndSound = false;
         window.history.pushState({}, '', '/live/' + currentSlug + '/' + targetId);
         fetchData();
     }
@@ -1100,15 +1196,41 @@ function navigateParticipant(direction) {
 
 function toggleTimer() {
     if (!currentId) return;
-    var action = srvRun ? 'pause' : 'start';
-    fetch('/live/' + currentSlug + '/timer/' + action + '?id=' + currentId)
-        .then(function() { fetchData(); });
+    var currentRem = getRemainingSeconds();
+
+    if (!srvRun) {
+        // Start instan (0ms delay)
+        if (currentRem <= 0) {
+            currentRem = srvTotal || 300;
+            playedMidSound = false;
+            playedEndSound = false;
+        }
+        srvRem = currentRem;
+        srvRun = true;
+        lastUpd = Math.floor(Date.now() / 1000);
+        updateTimerDisplay(srvRem, true);
+        playAudio(startAudio); // Rule 4: bunyi sound saat start
+        fetch('/live/' + currentSlug + '/timer/start?id=' + currentId);
+    } else {
+        // Pause instan (0ms delay)
+        srvRem = currentRem;
+        srvRun = false;
+        lastUpd = Math.floor(Date.now() / 1000);
+        updateTimerDisplay(srvRem, false);
+        fetch('/live/' + currentSlug + '/timer/pause?id=' + currentId);
+    }
 }
 
 function resetTimer() {
     if (!currentId) return;
-    fetch('/live/' + currentSlug + '/timer/reset?id=' + currentId)
-        .then(function() { fetchData(); });
+    // Reset instan (0ms delay)
+    srvRun = false;
+    srvRem = srvTotal || 300;
+    lastUpd = Math.floor(Date.now() / 1000);
+    playedMidSound = false;
+    playedEndSound = false;
+    updateTimerDisplay(srvRem, false);
+    fetch('/live/' + currentSlug + '/timer/reset?id=' + currentId);
 }
 
 function toggleFullscreen() {
@@ -1135,6 +1257,9 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Initial timer styling
+updateTimerDisplay(srvRem, srvRun);
+
 fetchData();
 initAutoScroll();
 setInterval(fetchData, 2500);
@@ -1142,7 +1267,7 @@ setInterval(function() {
     if (srvRun) {
         tickTimer();
     }
-}, 1000);
+}, 500);
 </script>
 </body>
 </html>
