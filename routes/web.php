@@ -48,12 +48,19 @@ use App\Http\Controllers\NilaiTigapuluhJuzController;
 
 Route::post("/tahun-filter", [\App\Http\Controllers\TahunFilterController::class, "filter"])->name("tahun.filter");
 
-Route::get("/live/{slug}/data/{id?}", [LiveScoreController::class, "getData"])->name("live-score.data");
-Route::get("/live/{slug}/timer/{action}", [LiveScoreController::class, "controlTimer"])->name("live-score.timer");
+Route::withoutMiddleware([
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+    \Illuminate\Cookie\Middleware\EncryptCookies::class,
+    \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+    \Illuminate\Session\Middleware\StartSession::class,
+])->group(function () {
+    Route::get("/live/{slug}/data/{id?}", [LiveScoreController::class, "getData"])->name("live-score.data");
+    Route::get("/live/{slug}/timer/{action}", [LiveScoreController::class, "controlTimer"])->name("live-score.timer");
+    Route::get("/live-tartil/data/{id?}", [LiveScoreController::class, "getData"])->name("nilai-tartil-live.data");
+    Route::get("/live-tartil/timer/{action}", [LiveScoreController::class, "controlTimer"])->name("nilai-tartil-live.timer");
+});
 Route::get("/live/{slug}/{id?}", [LiveScoreController::class, "index"])->name("live-score.index");
-
-Route::get("/live-tartil/data/{id?}", [LiveScoreController::class, "getData"])->name("nilai-tartil-live.data");
-Route::get("/live-tartil/timer/{action}", [LiveScoreController::class, "controlTimer"])->name("nilai-tartil-live.timer");
 Route::get("/live-tartil/{id?}", [LiveScoreController::class, "index"])->name("nilai-tartil-live.index");
 Route::get("/mtq-timer-status", [TimerStatusController::class, "index"])->name("timer-status");
 Route::fallback(function() {

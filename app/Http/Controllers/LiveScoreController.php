@@ -216,7 +216,9 @@ class LiveScoreController extends Controller
         $table = $cfg['table'];
 
         $activeTahun = Tahun::where('is_active', true)->first();
-        $selectedTahunId = session('selected_tahun_id', $activeTahun?->id);
+        $selectedTahunId = (request()->hasSession() && session()->has('selected_tahun_id'))
+            ? session('selected_tahun_id')
+            : $activeTahun?->id;
 
         if (!empty($cfg['is_grup'])) {
             $query = $model::with(['grup.utusan', 'grup.peserta'])
@@ -346,7 +348,7 @@ class LiveScoreController extends Controller
             $totalSecs = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
             $m = floor($totalSecs / 60);
             $s = $totalSecs % 60;
-            return response()->json([
+            return new \Illuminate\Http\JsonResponse([
                 'empty' => true,
                 'cabang' => $cfg['label'],
                 'fields' => $defaultFields,
@@ -447,7 +449,7 @@ class LiveScoreController extends Controller
 
         $totalVal = (float)($currentRecord->total ?? 0);
 
-        return response()->json([
+        return new \Illuminate\Http\JsonResponse([
             'empty' => false,
             'current' => [
                 'id' => $currentRecord->id,
@@ -527,7 +529,7 @@ class LiveScoreController extends Controller
             Cache::put($cacheKey, $timerState, 3600);
         }
 
-        return response()->json([
+        return new \Illuminate\Http\JsonResponse([
             'success' => true,
             'timer' => [
                 'remaining' => $timerState['remaining_seconds'],

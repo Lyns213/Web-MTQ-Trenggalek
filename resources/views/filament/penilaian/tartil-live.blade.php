@@ -760,13 +760,8 @@
     <!-- Participant Card -->
     <div class="card-participant">
         <div class="participant-photo-wrap">
-            @if($curr && !empty($curr['pasfoto']))
-                <img src="{{ $curr['pasfoto'] }}" id="pPhoto" class="participant-photo" alt="{{ $curr['nama'] }}" onerror="this.style.display='none'; document.getElementById('pPhotoPh').style.display='flex';">
-                <div id="pPhotoPh" class="participant-photo-placeholder" style="display: none;">👤</div>
-            @else
-                <img src="" id="pPhoto" class="participant-photo" alt="" style="display: none;" onerror="this.style.display='none'; document.getElementById('pPhotoPh').style.display='flex';">
-                <div id="pPhotoPh" class="participant-photo-placeholder">👤</div>
-            @endif
+            <img src="{{ $curr['pasfoto'] ?? '' }}" id="pPhoto" class="participant-photo" alt="{{ $curr['nama'] ?? '' }}" style="{{ !empty($curr['pasfoto']) ? 'display: block;' : 'display: none;' }}" onerror="this.style.display='none'; document.getElementById('pPhotoPh').style.display='flex';">
+            <div id="pPhotoPh" class="participant-photo-placeholder" style="{{ !empty($curr['pasfoto']) ? 'display: none;' : 'display: flex;' }}">👤</div>
         </div>
         <div class="participant-navy-box">
             <div class="participant-name" id="pName">{{ $curr['nama'] ?? 'BELUM ADA PESERTA' }}</div>
@@ -1091,6 +1086,81 @@ function setLeaderboardSort(mode) {
     renderLeaderboard(allParticipantsData, true);
 }
 
+function getAppBasePath() {
+    var match = window.location.pathname.match(/^(.*?)\/live/i);
+    return (match && match[1]) ? match[1] : '';
+}
+
+function resolveStorageUrl(url) {
+    if (!url || typeof url !== 'string' || url.trim() === '') return '';
+    if (url.indexOf('/storage/') !== -1) {
+        var filename = url.split('/storage/')[1];
+        return getAppBasePath() + '/storage/' + filename;
+    }
+    return url;
+}
+
+function updateParticipantPhoto(url, name) {
+    var photoWrap = document.querySelector('.participant-photo-wrap');
+    if (!photoWrap) return;
+
+    var photoEl = document.getElementById('pPhoto');
+    var photoPh = document.getElementById('pPhotoPh');
+
+    if (!url || typeof url !== 'string' || url.trim() === '') {
+        if (photoEl) {
+            photoEl.style.display = 'none';
+            photoEl.removeAttribute('src');
+        }
+        if (photoPh) {
+            photoPh.style.display = 'flex';
+            photoPh.style.opacity = '1';
+        }
+        return;
+    }
+
+    var cleanUrl = resolveStorageUrl(url);
+
+    if (!photoEl) {
+        photoEl = document.createElement('img');
+        photoEl.id = 'pPhoto';
+        photoEl.className = 'participant-photo';
+        photoWrap.insertBefore(photoEl, photoPh);
+    }
+
+    photoEl.alt = name || 'Foto Peserta';
+
+    photoEl.onerror = function() {
+        this.style.display = 'none';
+        if (photoPh) {
+            photoPh.style.display = 'flex';
+            photoPh.style.opacity = '1';
+        }
+    };
+
+    photoEl.onload = function() {
+        this.style.display = 'block';
+        this.style.opacity = '1';
+        if (photoPh) photoPh.style.display = 'none';
+    };
+
+    // Langsung perbarui src seketika
+    photoEl.src = cleanUrl;
+    photoEl.style.display = 'block';
+    photoEl.style.opacity = '1';
+    if (photoPh) photoPh.style.display = 'none';
+}
+
+// Preload semua foto peserta ke memory cache browser agar klik ganti peserta 0ms instan
+if (Array.isArray(allParticipantsData)) {
+    allParticipantsData.forEach(function(p) {
+        if (p.pasfoto) {
+            var preImg = new Image();
+            preImg.src = resolveStorageUrl(p.pasfoto);
+        }
+    });
+}
+
 function selectParticipant(id) {
     if (!id || id == currentId) return;
 
@@ -1102,7 +1172,7 @@ function selectParticipant(id) {
     }, 8000);
 
     currentId = Number(id);
-    window.history.pushState({}, '', '/live/' + currentSlug + '/' + currentId);
+    window.history.pushState({}, '', getAppBasePath() + '/live/' + currentSlug + '/' + currentId);
 
     // 2. Update nextId & prevId seketika dari daftar peserta
     var currentIndex = (allParticipantsData || []).findIndex(function(p) { return p.id == currentId; });
@@ -1121,8 +1191,6 @@ function selectParticipant(id) {
         var pNumberEl = document.getElementById('pNumber');
         var pOriginEl = document.getElementById('pOrigin');
         var sTotalEl = document.getElementById('sTotal');
-        var photoEl = document.getElementById('pPhoto');
-        var photoPh = document.getElementById('pPhotoPh');
         var cabangTitleEl = document.getElementById('cabangTitle');
 
         if (pNameEl) pNameEl.textContent = pData.nama || '-';
@@ -1134,15 +1202,7 @@ function selectParticipant(id) {
             cabangTitleEl.innerHTML = '<span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG ' + pData.cabang + ')</span>';
         }
 
-        if (pData.pasfoto) {
-            photoEl.src = pData.pasfoto;
-            photoEl.style.display = 'block';
-            photoEl.style.opacity = '1';
-            if (photoPh) photoPh.style.display = 'none';
-        } else {
-            photoEl.style.display = 'none';
-            if (photoPh) photoPh.style.display = 'flex';
-        }
+        updateParticipantPhoto(pData.pasfoto, pData.nama);
 
         if (pData.fields && pData.fields.length > 0) {
             renderFields(pData.fields);
@@ -1432,22 +1492,7 @@ function updateDisplay(data) {
         highlightActiveLeaderboard(currentId);
     }
 
-    var photoEl = document.getElementById('pPhoto');
-    var photoPh = document.getElementById('pPhotoPh');
-    if (data.current.pasfoto) {
-        if (photoEl.src !== data.current.pasfoto) {
-            photoEl.src = data.current.pasfoto;
-        }
-        photoEl.style.display = 'block';
-        photoEl.style.opacity = '1';
-        if (photoPh) photoPh.style.display = 'none';
-    } else {
-        photoEl.style.display = 'none';
-        if (photoPh) {
-            photoPh.style.display = 'flex';
-            photoPh.style.opacity = '1';
-        }
-    }
+    updateParticipantPhoto(data.current.pasfoto, data.current.nama);
 
     var pNameEl = document.getElementById('pName');
     var pNumberEl = document.getElementById('pNumber');
@@ -1499,14 +1544,20 @@ function tickTimer() {
     }
 }
 
+let isFetchingData = false;
+
 function fetchData(forcedId) {
+    if (isFetchingData && forcedId === undefined) return;
+    isFetchingData = true;
+
     var reqSeq = ++fetchSequence;
     var targetId = (forcedId !== undefined && forcedId !== null) ? Number(forcedId) : Number(currentId);
-    var url = '/live/' + currentSlug + '/data' + (targetId ? ('/' + targetId) : '');
+    var url = getAppBasePath() + '/live/' + currentSlug + '/data' + (targetId ? ('/' + targetId) : '');
 
     fetch(url)
         .then(function(res) { return res.json(); })
         .then(function(data) {
+            isFetchingData = false;
             if (!data || data.empty) return;
             // Abaikan respons request lama jika ada request yang lebih baru
             if (reqSeq !== fetchSequence) return;
@@ -1519,6 +1570,7 @@ function fetchData(forcedId) {
             }
         })
         .catch(function(err) {
+            isFetchingData = false;
             console.error('Poll error:', err);
         });
 }
@@ -1546,14 +1598,14 @@ function toggleTimer() {
         updateTimerDisplay(timerSeconds, true);
         playBeeps(1, 'start'); // 1 bel saat mulai
         tickTimer();
-        fetch('/live/' + currentSlug + '/timer/start?id=' + currentId);
+        fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/start?id=' + currentId);
     } else {
         // Pause
         timerSeconds = getRemainingSeconds();
         isTimerRunning = false;
         timerInitialAtStart = timerSeconds;
         updateTimerDisplay(timerSeconds, false);
-        fetch('/live/' + currentSlug + '/timer/pause?id=' + currentId);
+        fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/pause?id=' + currentId);
     }
 }
 
@@ -1566,7 +1618,7 @@ function resetTimer() {
     playedMidSound = false;
     playedEndSound = false;
     updateTimerDisplay(totalTimerSeconds, false);
-    fetch('/live/' + currentSlug + '/timer/reset?id=' + currentId);
+    fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/reset?id=' + currentId);
 }
 
 function toggleFullscreen() {
