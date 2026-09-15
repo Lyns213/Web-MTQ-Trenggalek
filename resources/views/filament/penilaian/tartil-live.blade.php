@@ -876,7 +876,7 @@ let nextId = {{ $initialData['next']['id'] ?? 'null' }};
 let prevId = {{ $initialData['previous']['id'] ?? 'null' }};
 let totalTimerSeconds = {{ $timer['total'] ?? 300 }};
 let timerSeconds = {{ $timer['remaining'] ?? 300 }};
-let isTimerRunning = {{ ($timer['is_running'] ?? false) ? 'true' : 'false' }};
+let isTimerRunning = false;
 let timerStartedAt = Date.now();
 let timerInitialAtStart = timerSeconds;
 let allParticipantsData = @json($participants);
@@ -911,81 +911,54 @@ function unlockAudioSystem() {
     document.addEventListener(evt, unlockAudioSystem, { capture: true, passive: true });
 });
 
-// Electronic "Teeet" Buzzer Sound Generator
-function playTeetBuzzer(duration) {
+// Precise AudioContext Web Audio "Teeeet" Buzzer Generator
+function playTeetBuzzer(duration, delayMs) {
     try {
         var ctx = getAudioContext();
         if (!ctx) return;
-        if (ctx.state === 'suspended') {
-            ctx.resume().catch(function() {});
+
+        function scheduleBuzzer() {
+            var offset = delayMs ? (delayMs / 1000) : 0;
+            var now = ctx.currentTime + offset;
+            var dur = duration || 0.35;
+
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(950, now); // 950Hz electronic timer tone
+
+            gain.gain.setValueAtTime(0.5, now);
+            gain.gain.setValueAtTime(0.5, now + dur - 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + dur);
         }
-        var now = ctx.currentTime;
-        var dur = duration || 0.4;
 
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-
-        osc.type = 'square'; // 'square' gives crisp digital timer "teeet" buzzer sound
-        osc.frequency.setValueAtTime(950, now); // 950Hz electronic beep
-
-        gain.gain.setValueAtTime(0.4, now);
-        gain.gain.setValueAtTime(0.4, now + dur - 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(now);
-        osc.stop(now + dur);
-    } catch(e) {
-        console.warn('Buzzer error:', e);
-    }
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(scheduleBuzzer).catch(function() {});
+        } else {
+            scheduleBuzzer();
+        }
+    } catch(e) {}
 }
 
 let playedMidSound = timerSeconds <= 60 && timerSeconds > 0;
 let playedEndSound = timerSeconds <= 0;
 
-function playSingleSound(type) {
-    unlockAudioSystem();
-
-    var mp3Name = type === 'start' ? 'mtqstart.mp3' : (type === 'mid' ? 'mtqmid.mp3' : 'mtqend.mp3');
-    var paths = [
-        '{{ asset("sounds/") }}/' + mp3Name,
-        '{{ url("sounds/") }}/' + mp3Name,
-        '/sounds/' + mp3Name,
-        'sounds/' + mp3Name
-    ];
-
-    function tryPath(i) {
-        if (i >= paths.length) return;
-        var a = new Audio(paths[i]);
-        a.volume = 1.0;
-        var p = a.play();
-        if (p !== undefined) {
-            p.catch(function() {
-                tryPath(i + 1);
-            });
-        }
-    }
-    tryPath(0);
-
-    // Play "teeet" electronic buzzer
-    var dur = type === 'end' ? 0.6 : 0.35;
-    playTeetBuzzer(dur);
-}
-
 function playBeeps(count, type) {
     unlockAudioSystem();
-    let current = 0;
-    function playOne() {
-        if (current >= count) return;
-        playSingleSound(type);
-        current++;
-        if (current < count) {
-            setTimeout(playOne, 350); // 350ms gap between "teeet" beeps
-        }
+
+    var dur = type === 'start' ? 0.35 : (type === 'mid' ? 0.25 : 0.30);
+    var gapMs = type === 'start' ? 450 : (type === 'mid' ? 480 : 520);
+
+    for (var i = 0; i < count; i++) {
+        playTeetBuzzer(dur, i * gapMs);
     }
-    playOne();
 }
 
 function getRemainingSeconds() {
@@ -1459,16 +1432,6 @@ function fetchData(forcedId) {
 
             if (data.timer) {
                 totalTimerSeconds = data.timer.total || 300;
-
-                // JANGAN PERNAH mereset timer otomatis jika timer sedang jalan atau sudah berkurang!
-                // Sinkronkan hanya jika timer lokal dalam kondisi diam di waktu penuh dan server memberi tahu bahwa timer jalan
-                if (!isTimerRunning && timerSeconds === totalTimerSeconds && data.timer.is_running) {
-                    isTimerRunning = true;
-                    timerSeconds = data.timer.remaining;
-                    timerInitialAtStart = data.timer.remaining;
-                    timerStartedAt = Date.now();
-                    updateTimerDisplay(timerSeconds, true);
-                }
             }
         })
         .catch(function(err) {
@@ -1498,6 +1461,7 @@ function toggleTimer() {
         timerInitialAtStart = timerSeconds;
         updateTimerDisplay(timerSeconds, true);
         playBeeps(1, 'start'); // 1 bel saat mulai
+        tickTimer();
         fetch('/live/' + currentSlug + '/timer/start?id=' + currentId);
     } else {
         // Pause
