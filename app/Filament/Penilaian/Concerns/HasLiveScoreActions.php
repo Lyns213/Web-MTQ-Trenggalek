@@ -24,6 +24,9 @@ class HasLiveScoreActions
         return TextColumn::make('timer_live')
             ->label('Timer')
             ->getStateUsing(function ($record) use ($slug) {
+                if (Cache::get('mtq_live_active_' . $slug) != $record->id) {
+                    return '';
+                }
                 $cacheKey = 'mtq_timer_' . $slug . '_' . $record->id;
                 $timerState = Cache::get($cacheKey);
 
@@ -43,12 +46,16 @@ class HasLiveScoreActions
             })
             ->badge()
             ->color(function ($record) use ($slug) {
+                if (Cache::get('mtq_live_active_' . $slug) != $record->id) return null;
                 $cacheKey = 'mtq_timer_' . $slug . '_' . $record->id;
                 $timerState = Cache::get($cacheKey);
                 if (!$timerState) return 'gray';
                 return $timerState['is_running'] ? 'success' : 'gray';
             })
             ->extraAttributes(function ($record) use ($slug) {
+                if (Cache::get('mtq_live_active_' . $slug) != $record->id) {
+                    return [];
+                }
                 $cacheKey = 'mtq_timer_' . $slug . '_' . $record->id;
                 $timerState = Cache::get($cacheKey);
                 if (!$timerState || !$timerState['is_running']) {
@@ -130,6 +137,7 @@ class HasLiveScoreActions
                         if ($timerState['remaining_seconds'] > 0) {
                             $timerState['is_running'] = true;
                             $timerState['started_at'] = time();
+                            Cache::put('mtq_live_active_' . $slug, $record->id, 3600);
                             Notification::make()->title('Timer dimulai')->success()->send();
                         }
                     }

@@ -197,6 +197,11 @@ class LiveScoreController extends Controller
             $slug = 'tartil';
         }
 
+        $liveActiveId = Cache::get('mtq_live_active_' . $slug);
+        if ($liveActiveId && !$id) {
+            $id = $liveActiveId;
+        }
+
         $dataResponse = $this->getData($slug, $id);
         $initialData = $dataResponse->getData(true);
         $cfg = self::$config[$slug] ?? self::$config['tartil'];
@@ -251,7 +256,7 @@ class LiveScoreController extends Controller
         $records = $this->getRecords($slug);
 
         $liveActiveId = Cache::get('mtq_live_active_' . $slug);
-        if ($liveActiveId && !$id) {
+        if ($liveActiveId && (!request()->has('preview') || !$id)) {
             $id = $liveActiveId;
         }
 
@@ -480,6 +485,7 @@ class LiveScoreController extends Controller
                 'total' => $timerState['total_seconds'],
                 'is_running' => $timerState['is_running'],
             ],
+            'active_id' => $liveActiveId ? (int)$liveActiveId : null,
             'total_peserta' => $records->count(),
             'participants' => $participants,
         ]);

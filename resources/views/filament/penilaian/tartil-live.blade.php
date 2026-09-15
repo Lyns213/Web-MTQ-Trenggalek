@@ -1038,8 +1038,8 @@ let pollTimer = null;
 function restartPollTimer() {
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(function() {
-        fetchData(currentId);
-    }, 2500);
+        fetchData();
+    }, 2000);
 }
 
 function highlightActiveLeaderboard(id) {
@@ -1551,22 +1551,42 @@ function fetchData(forcedId) {
     isFetchingData = true;
 
     var reqSeq = ++fetchSequence;
-    var targetId = (forcedId !== undefined && forcedId !== null) ? Number(forcedId) : Number(currentId);
-    var url = getAppBasePath() + '/live/' + currentSlug + '/data' + (targetId ? ('/' + targetId) : '');
+    var isPreview = (forcedId !== undefined && forcedId !== null);
+    var url = getAppBasePath() + '/live/' + currentSlug + '/data' + (isPreview ? ('/' + Number(forcedId) + '?preview=1') : '');
 
     fetch(url)
         .then(function(res) { return res.json(); })
         .then(function(data) {
             isFetchingData = false;
             if (!data || data.empty) return;
-            // Abaikan respons request lama jika ada request yang lebih baru
             if (reqSeq !== fetchSequence) return;
-            if (targetId && data.current && Number(data.current.id) !== targetId) return;
+            if (isPreview && data.current && Number(data.current.id) !== Number(forcedId)) return;
 
             updateDisplay(data);
 
             if (data.timer) {
-                totalTimerSeconds = data.timer.total || 300;
+                totalTimerSeconds = Number(data.timer.total) || 300;
+                var serverRemaining = Number(data.timer.remaining);
+                var serverIsRunning = Boolean(data.timer.is_running);
+
+                if (serverIsRunning) {
+                    // Timer sedang aktif dijalankan di panel dewan hakim
+                    if (!isTimerRunning || Math.abs(timerSeconds - serverRemaining) > 2) {
+                        isTimerRunning = true;
+                        timerSeconds = serverRemaining;
+                        timerInitialAtStart = serverRemaining;
+                        timerStartedAt = Date.now();
+                        updateTimerDisplay(timerSeconds, true);
+                    }
+                } else {
+                    // Timer sedang dijeda atau direset di panel dewan hakim
+                    if (isTimerRunning || Math.abs(timerSeconds - serverRemaining) > 1) {
+                        isTimerRunning = false;
+                        timerSeconds = serverRemaining;
+                        timerInitialAtStart = serverRemaining;
+                        updateTimerDisplay(timerSeconds, false);
+                    }
+                }
             }
         })
         .catch(function(err) {

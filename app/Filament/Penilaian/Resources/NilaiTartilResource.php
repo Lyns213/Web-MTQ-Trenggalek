@@ -139,6 +139,9 @@ class NilaiTartilResource extends Resource
                 TextColumn::make('timer_countdown')
                     ->label('Timer')
                     ->getStateUsing(function ($record) {
+                        if (Cache::get('mtq_live_active_tartil') != $record->id) {
+                            return '';
+                        }
                         $cacheKey = 'mtq_timer_tartil_' . $record->id;
                         $timerState = Cache::get($cacheKey);
 
@@ -159,6 +162,9 @@ class NilaiTartilResource extends Resource
                         return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
                     })
                     ->extraAttributes(function ($record) {
+                        if (Cache::get('mtq_live_active_tartil') != $record->id) {
+                            return [];
+                        }
                         $cacheKey = 'mtq_timer_tartil_' . $record->id;
                         $timerState = Cache::get($cacheKey);
 
@@ -309,6 +315,7 @@ class NilaiTartilResource extends Resource
                             if ($timerState['remaining_seconds'] > 0) {
                                 $timerState['is_running'] = true;
                                 $timerState['started_at'] = time();
+                                Cache::put('mtq_live_active_tartil', $record->id, 3600);
                                 Notification::make()->title('Timer dimulai')->success()->send();
                             }
                         }
