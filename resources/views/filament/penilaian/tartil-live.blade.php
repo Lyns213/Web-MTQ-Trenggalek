@@ -555,9 +555,9 @@
 
         .lb-item {
             display: grid;
-            grid-template-columns: 30px 1fr 78px;
+            grid-template-columns: 24px 1fr 68px;
             align-items: center;
-            padding: 6px 8px;
+            padding: 5px 8px;
             background: rgba(13, 40, 67, 0.55);
             border: 1px solid rgba(255, 255, 255, 0.07);
             border-radius: 10px;
@@ -631,14 +631,15 @@
 
         .lb-meta {
             font-family: 'Montserrat', sans-serif;
-            font-size: 9.5px;
+            font-size: 9px;
             font-weight: 600;
             color: #94a3b8;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.2;
+            line-height: 1.3;
             margin-top: 1px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            flex-wrap: wrap;
         }
 
         .lb-score-wrap {
@@ -661,6 +662,36 @@
             display: inline-block;
             min-height: 15px;
             width: 10px;
+        }
+
+        .lb-scores-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+
+        .lb-chip {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 8px;
+            font-weight: 700;
+            padding: 1px 4px;
+            border-radius: 3px;
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+
+        .lb-chip.done {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: #38bdf8;
+        }
+
+        .lb-chip.empty {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #64748b;
         }
 
         .lb-live-tag {
@@ -821,22 +852,39 @@
             @forelse($sortedParticipants as $idx => $p)
                 @php
                     $isCur = ($curr && ($p['id'] == ($curr['id'] ?? null)));
+                    $hasScore = (($p['total'] ?? 0) > 0);
                     $rankClass = '';
-                    if (($p['total'] ?? 0) > 0) {
+                    if ($hasScore) {
                         $sudahCount++;
                         if ($idx === 0) $rankClass = 'gold';
                         elseif ($idx === 1) $rankClass = 'silver';
                         elseif ($idx === 2) $rankClass = 'bronze';
+                    }
+
+                    $noPrefix = 'No. ' . ($p['no_peserta'] ?? '-') . ' • ';
+                    $fieldsHtml = '';
+                    if ($hasScore && !empty($p['fields'])) {
+                        $fieldsHtml .= '<span class="lb-scores-tag">';
+                        foreach ($p['fields'] as $f) {
+                            $fullL = ucwords(strtolower($f['label']));
+                            $fVal = (float)($f['value'] ?? 0);
+                            if ($fVal > 0) {
+                                $fieldsHtml .= '<span class="lb-chip done">' . $fullL . ': ' . $fVal . '</span>';
+                            } else {
+                                $fieldsHtml .= '<span class="lb-chip empty">' . $fullL . ': -</span>';
+                            }
+                        }
+                        $fieldsHtml .= '</span>';
                     }
                 @endphp
                 <div class="lb-item {{ $isCur ? 'active' : '' }}" data-id="{{ $p['id'] }}" onclick="selectParticipant({{ $p['id'] }})">
                     <div class="lb-rank {{ $rankClass }}">{{ $idx + 1 }}</div>
                     <div class="lb-info">
                         <div class="lb-name" title="{{ $p['nama'] }}">{{ $p['nama'] }}</div>
-                        <div class="lb-meta">No. {{ $p['no_peserta'] }} &bull; {{ $p['kecamatan'] }}</div>
+                        <div class="lb-meta"><span>{{ $noPrefix }}{{ $p['kecamatan'] }}</span>{!! $fieldsHtml !!}</div>
                     </div>
                     <div class="lb-score-wrap">
-                        @if(($p['total'] ?? 0) > 0)
+                        @if($hasScore)
                             <span class="lb-score-val">{{ number_format($p['total'], 2) }}</span>
                         @else
                             <span class="lb-score-empty"></span>
@@ -1116,6 +1164,32 @@ function selectParticipant(id) {
     fetchData(currentId);
 }
 
+function formatFullLabel(label) {
+    if (!label) return '';
+    var words = label.toLowerCase().split(' ');
+    for (var i = 0; i < words.length; i++) {
+        if (words[i] === '&') continue;
+        words[i] = words[i].charAt(0).toUpperCase() + words[i].slice(1);
+    }
+    return words.join(' ');
+}
+
+function buildFieldChipsHtml(fields, hasScore) {
+    if (!hasScore || !fields || fields.length === 0) return '';
+    var html = '<span class="lb-scores-tag">';
+    fields.forEach(function(f) {
+        var fullL = formatFullLabel(f.label);
+        var val = Number(f.value || 0);
+        if (val > 0) {
+            html += '<span class="lb-chip done">' + fullL + ': ' + val + '</span>';
+        } else {
+            html += '<span class="lb-chip empty">' + fullL + ': -</span>';
+        }
+    });
+    html += '</span>';
+    return html;
+}
+
 function renderLeaderboard(participants, forceRebuild) {
     if (participants) {
         allParticipantsData = participants;
@@ -1176,6 +1250,14 @@ function renderLeaderboard(participants, forceRebuild) {
                 rankEl.textContent = (idx + 1);
             }
 
+            // Update meta with field scores
+            var metaEl = item.querySelector('.lb-meta');
+            if (metaEl) {
+                var chipsHtml = buildFieldChipsHtml(p.fields, hasScore);
+                var baseMeta = 'No. ' + (p.no_peserta || '-') + ' • ' + (p.kecamatan || '-');
+                metaEl.innerHTML = '<span>' + baseMeta + '</span>' + chipsHtml;
+            }
+
             // Update score
             var scoreWrap = item.querySelector('.lb-score-wrap');
             if (scoreWrap) {
@@ -1220,6 +1302,8 @@ function renderLeaderboard(participants, forceRebuild) {
                 }
             }
 
+            var chipsHtml = buildFieldChipsHtml(p.fields, hasScore);
+            var baseMeta = 'No. ' + (p.no_peserta || '-') + ' • ' + (p.kecamatan || '-');
             var scoreDisplay = hasScore
                 ? '<span class="lb-score-val">' + Number(p.total).toFixed(2) + '</span>'
                 : '<span class="lb-score-empty"></span>';
@@ -1228,7 +1312,7 @@ function renderLeaderboard(participants, forceRebuild) {
                 '<div class="lb-rank ' + rankClass + '">' + (idx + 1) + '</div>' +
                 '<div class="lb-info">' +
                     '<div class="lb-name" title="' + (p.nama || '-') + '">' + (p.nama || '-') + '</div>' +
-                    '<div class="lb-meta">No. ' + (p.no_peserta || '-') + ' &bull; ' + (p.kecamatan || '-') + '</div>' +
+                    '<div class="lb-meta"><span>' + baseMeta + '</span>' + chipsHtml + '</div>' +
                 '</div>' +
                 '<div class="lb-score-wrap">' +
                     scoreDisplay +

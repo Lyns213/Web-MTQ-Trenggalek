@@ -299,7 +299,8 @@ class LiveScoreController extends Controller
         };
 
         $isGrup = !empty($cfg['is_grup']);
-        $participants = $records->map(function ($r) use ($isGrup, $cfg, $extractFields) {
+        $totalFieldsCount = count($cfg['fields']);
+        $participants = $records->map(function ($r) use ($isGrup, $cfg, $extractFields, $totalFieldsCount) {
             if ($isGrup) {
                 $nama = $r->grup?->nama ?? 'Grup';
                 $no = 'GRUP';
@@ -313,6 +314,18 @@ class LiveScoreController extends Controller
                 $cabang = $r->peserta?->cabang?->nama_cabang ?? $cfg['label'];
                 $pasfoto = $r->peserta?->pasfoto ? asset('storage/' . $r->peserta->pasfoto) : null;
             }
+
+            $filledFields = [];
+            foreach ($cfg['fields'] as $f) {
+                $rawVal = $r->{$f['key']} ?? null;
+                $val = (float)($rawVal ?? 0);
+                if (!is_null($rawVal) && $rawVal !== '' && $val > 0) {
+                    $filledFields[] = $f['label'];
+                }
+            }
+            $isComplete = count($filledFields) === $totalFieldsCount && $totalFieldsCount > 0;
+            $evaluatedLabel = (!$isComplete && count($filledFields) > 0) ? implode(', ', $filledFields) : '';
+
             return [
                 'id' => $r->id,
                 'nama' => $nama,
@@ -321,6 +334,8 @@ class LiveScoreController extends Controller
                 'cabang' => strtoupper($cabang),
                 'pasfoto' => $pasfoto,
                 'fields' => $extractFields($r),
+                'is_complete' => $isComplete,
+                'evaluated_label' => $evaluatedLabel,
                 'total' => (float)($r->total ?? 0),
             ];
         })->values()->all();
@@ -409,8 +424,10 @@ class LiveScoreController extends Controller
         $cabangNama = $cabang ? $cabang->nama_cabang : $cfg['label'];
 
         $fieldsData = [];
+        $currFilledFields = [];
         foreach ($cfg['fields'] as $f) {
-            $val = (float)($currentRecord->{$f['key']} ?? 0);
+            $rawVal = $currentRecord->{$f['key']} ?? null;
+            $val = (float)($rawVal ?? 0);
             $max = $f['max'] ?? 100;
             $pct = min(100, max(0, ($val / $max) * 100));
             $fieldsData[] = [
@@ -420,7 +437,13 @@ class LiveScoreController extends Controller
                 'max' => $max,
                 'pct' => $pct,
             ];
+            if (!is_null($rawVal) && $rawVal !== '' && $val > 0) {
+                $currFilledFields[] = $f['label'];
+            }
         }
+
+        $isCurrComplete = count($currFilledFields) === $totalFieldsCount && $totalFieldsCount > 0;
+        $currEvaluatedLabel = (!$isCurrComplete && count($currFilledFields) > 0) ? implode(', ', $currFilledFields) : '';
 
         $totalVal = (float)($currentRecord->total ?? 0);
 
@@ -435,6 +458,8 @@ class LiveScoreController extends Controller
                 'cabang' => strtoupper($cabangNama),
                 'pasfoto' => $pasfotoUrl,
                 'fields' => $fieldsData,
+                'is_complete' => $isCurrComplete,
+                'evaluated_label' => $currEvaluatedLabel,
                 'total' => $totalVal,
             ],
             'next' => $nextRecord ? [
