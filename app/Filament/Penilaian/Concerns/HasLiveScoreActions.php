@@ -58,10 +58,23 @@ class HasLiveScoreActions
                 }
                 $cacheKey = 'mtq_timer_' . $slug . '_' . $record->id;
                 $timerState = Cache::get($cacheKey);
-                if (!$timerState || !$timerState['is_running']) {
+                if (!$timerState) {
                     return [];
                 }
-                return ['class' => 'timer-badge-running'];
+                $remaining = $timerState['remaining_seconds'];
+                if ($timerState['is_running'] && $timerState['started_at']) {
+                    $elapsed = time() - $timerState['started_at'];
+                    $remaining = max(0, $remaining - $elapsed);
+                }
+                return [
+                    'data-remaining' => $remaining,
+                    'data-total-seconds' => $timerState['total_seconds'] ?? 300,
+                    'data-record-id' => $record->id,
+                    'data-is-running' => ($timerState['is_running'] ?? false) ? 1 : 0,
+                    'data-format' => 'ms',
+                    'data-slug' => $slug,
+                    'class' => 'timer-cell timer-badge-running',
+                ];
             });
     }
 
@@ -101,6 +114,12 @@ class HasLiveScoreActions
                 ->tooltip(fn ($record) => (Cache::get('mtq_timer_' . $slug . '_' . $record->id)['is_running'] ?? false) ? 'Jeda Waktu' : 'Mulai Waktu')
                 ->icon(fn ($record) => (Cache::get('mtq_timer_' . $slug . '_' . $record->id)['is_running'] ?? false) ? 'heroicon-o-pause' : 'heroicon-o-play')
                 ->color(fn ($record) => (Cache::get('mtq_timer_' . $slug . '_' . $record->id)['is_running'] ?? false) ? 'warning' : 'success')
+                ->extraAttributes(fn ($record) => [
+                    'class' => 'btn-toggle-timer',
+                    'data-action-timer' => (Cache::get('mtq_timer_' . $slug . '_' . $record->id)['is_running'] ?? false) ? 'pause' : 'start',
+                    'data-record-id' => $record->id,
+                    'data-slug' => $slug,
+                ])
                 ->action(function ($record) use ($slug) {
                     $cacheKey = 'mtq_timer_' . $slug . '_' . $record->id;
                     $timerState = Cache::get($cacheKey);
@@ -134,12 +153,15 @@ class HasLiveScoreActions
                         $timerState['started_at'] = null;
                         Notification::make()->title('Timer dijeda')->warning()->send();
                     } else {
-                        if ($timerState['remaining_seconds'] > 0) {
-                            $timerState['is_running'] = true;
-                            $timerState['started_at'] = time();
-                            Cache::put('mtq_live_active_' . $slug, $record->id, 86400);
-                            Notification::make()->title('Timer dimulai')->success()->send();
+                        if ($timerState['remaining_seconds'] <= 0) {
+                            $timerState['remaining_seconds'] = $timerState['total_seconds'];
                         }
+                        if (!$timerState['is_running'] || empty($timerState['started_at'])) {
+                            $timerState['started_at'] = time();
+                        }
+                        $timerState['is_running'] = true;
+                        Cache::put('mtq_live_active_' . $slug, $record->id, 86400);
+                        Notification::make()->title('Timer dimulai')->success()->send();
                     }
 
                     Cache::put($cacheKey, $timerState, 86400);
@@ -154,17 +176,33 @@ class HasLiveScoreActions
                 ->modalHeading('Reset Waktu')
                 ->modalDescription('Apakah Anda yakin ingin mereset waktu?')
                 ->modalSubmitActionLabel('Reset Waktu')
+                ->extraAttributes(fn ($record) => [
+                    'class' => 'btn-reset-timer',
+                    'data-record-id' => $record->id,
+                    'data-slug' => $slug,
+                ])
                 ->action(function ($record) use ($slug) {
                     $cacheKey = 'mtq_timer_' . $slug . '_' . $record->id;
                     $timerState = Cache::get($cacheKey);
 
-                    if ($timerState) {
-                        $timerState['is_running'] = false;
-                        $timerState['started_at'] = null;
-                        $timerState['remaining_seconds'] = $timerState['total_seconds'];
-                        Cache::put($cacheKey, $timerState, 86400);
-                        Notification::make()->title('Timer direset')->danger()->send();
+                    if (!$timerState) {
+                        $cabang = $record->peserta?->cabang ?? $record->grup?->peserta?->first()?->cabang;
+                        $timer = $cabang ? $cabang->timer : '00:05:00';
+                        $parts = explode(':', $timer);
+                        $totalSeconds = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
+                        $timerState = [
+                            'total_seconds' => $totalSeconds,
+                            'remaining_seconds' => $totalSeconds,
+                            'is_running' => false,
+                            'started_at' => null,
+                        ];
                     }
+
+                    $timerState['is_running'] = false;
+                    $timerState['started_at'] = null;
+                    $timerState['remaining_seconds'] = $timerState['total_seconds'];
+                    Cache::put($cacheKey, $timerState, 86400);
+                    Notification::make()->title('Timer direset')->danger()->send();
                 }),
         ];
     }

@@ -63,12 +63,12 @@ Route::withoutMiddleware([
     Route::get("/live-tartil/timer/{action}", function(\Illuminate\Http\Request $request, $action = 'start') {
         return app(LiveScoreController::class)->controlTimer($request, 'tartil', $action);
     })->name("nilai-tartil-live.timer");
+    Route::get("/mtq-timer-status", [TimerStatusController::class, "index"])->name("timer-status");
 });
 Route::get("/live/{slug}/{id?}", [LiveScoreController::class, "index"])->name("live-score.index");
 Route::get("/live-tartil/{id?}", function($id = null) {
     return app(LiveScoreController::class)->index('tartil', $id);
 })->name("nilai-tartil-live.index");
-Route::get("/mtq-timer-status", [TimerStatusController::class, "index"])->name("timer-status");
 Route::fallback(function() {
     return redirect()->back();
 });

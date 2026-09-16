@@ -64,6 +64,10 @@ class PenilaianPanelProvider extends PanelProvider
                 fn () => view('filament.penilaian.custom-styles')
             )
             ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.penilaian.timer-script')
+            )
+            ->renderHook(
                 PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
                 fn () => view('filament.penilaian.auth.footer')
             )

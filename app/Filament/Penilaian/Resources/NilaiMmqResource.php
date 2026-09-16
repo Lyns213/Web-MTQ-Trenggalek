@@ -213,6 +213,7 @@ class NilaiMmqResource extends Resource
                     ->tooltip('Input Nilai')
                     ->icon('heroicon-o-plus')
                     ->color('success')
+                    ->successNotificationTitle('Nilai berhasil disimpan')
                     ->after(function ($data, $record) {
                         $record->bobot_total = $record->total * 100000000;
                         $record->bobot_bobot_materi = $record->bobot_materi * 1000000;
@@ -255,7 +256,7 @@ class NilaiMmqResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with(['peserta.utusan', 'peserta.cabang']);
         $selectedTahunId = session("selected_tahun_id");
         if ($selectedTahunId) {
             $query = $query->whereHas("peserta", function ($q) use ($selectedTahunId) {

@@ -98,6 +98,7 @@ class NilaiMfqResource extends Resource
                     ->tooltip('Input Nilai')
                     ->icon('heroicon-o-plus')
                     ->color('success')
+                    ->successNotificationTitle('Nilai berhasil disimpan')
                     ->modalHeading('Input Nilai')
                     ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
                     ->hidden(
@@ -124,7 +125,7 @@ class NilaiMfqResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with(['grup.utusan', 'grup.peserta']);
         $selectedTahunId = session("selected_tahun_id");
         if ($selectedTahunId) {
             $query = $query->whereHas("grup", function ($q) use ($selectedTahunId) {

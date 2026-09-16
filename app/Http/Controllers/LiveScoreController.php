@@ -255,12 +255,16 @@ class LiveScoreController extends Controller
         $cfg = self::$config[$slug] ?? self::$config['tartil'];
         $records = $this->getRecords($slug);
 
-        if (request()->has('set_active') && $id) {
-            Cache::put('mtq_live_active_' . $slug, (int)$id, 86400);
-            $liveActiveId = (int)$id;
+        if ($id) {
+            if (request()->has('set_active')) {
+                Cache::put('mtq_live_active_' . $slug, (int)$id, 86400);
+                $liveActiveId = (int)$id;
+            } else {
+                $liveActiveId = Cache::get('mtq_live_active_' . $slug);
+            }
         } else {
             $liveActiveId = Cache::get('mtq_live_active_' . $slug);
-            if ($liveActiveId && (!request()->has('preview') || !$id)) {
+            if ($liveActiveId) {
                 $id = $liveActiveId;
             }
         }
@@ -412,7 +416,7 @@ class LiveScoreController extends Controller
             $totalSeconds = 300;
         }
 
-        $activeTimerId = $liveActiveId ?: $currentRecord->id;
+        $activeTimerId = $currentRecord->id;
         $cacheKey = 'mtq_timer_' . $slug . '_' . $activeTimerId;
         $timerState = Cache::get($cacheKey);
 
@@ -428,16 +432,16 @@ class LiveScoreController extends Controller
 
         if ($timerState['is_running'] && $timerState['started_at']) {
             $elapsed = time() - $timerState['started_at'];
-            $timerState['remaining_seconds'] = max(0, $timerState['remaining_seconds'] - $elapsed);
-            $timerState['started_at'] = time();
-            if ($timerState['remaining_seconds'] <= 0) {
+            $remaining = max(0, $timerState['remaining_seconds'] - $elapsed);
+            if ($remaining <= 0) {
                 $timerState['is_running'] = false;
+                $timerState['remaining_seconds'] = 0;
                 $timerState['started_at'] = null;
+                Cache::put($cacheKey, $timerState, 86400);
             }
-            Cache::put($cacheKey, $timerState, 86400);
+        } else {
+            $remaining = $timerState['remaining_seconds'];
         }
-
-        $remaining = $timerState['remaining_seconds'];
         $m = floor($remaining / 60);
         $s = $remaining % 60;
         $timerFormatted = sprintf('%02d:%02d', $m, $s);
@@ -509,10 +513,10 @@ class LiveScoreController extends Controller
     {
         $slug = strtolower($slug);
         $liveActiveId = Cache::get('mtq_live_active_' . $slug);
-        $id = $liveActiveId ?: $request->input('id');
+        $id = $request->input('id') ?: $liveActiveId;
         if (!$id) return response()->json(['error' => 'No ID'], 400);
 
-        Cache::put('mtq_live_active_' . $slug, $id, 86400);
+        Cache::put('mtq_live_active_' . $slug, (int)$id, 86400);
 
         $cfg = self::$config[$slug] ?? self::$config['tartil'];
         $cacheKey = 'mtq_timer_' . $slug . '_' . $id;
@@ -534,8 +538,10 @@ class LiveScoreController extends Controller
             if ($timerState['remaining_seconds'] <= 0) {
                 $timerState['remaining_seconds'] = $timerState['total_seconds'];
             }
+            if (!$timerState['is_running'] || empty($timerState['started_at'])) {
+                $timerState['started_at'] = time();
+            }
             $timerState['is_running'] = true;
-            $timerState['started_at'] = time();
             Cache::put($cacheKey, $timerState, 86400);
         } elseif ($action === 'pause') {
             if ($timerState['is_running'] && $timerState['started_at']) {
@@ -552,12 +558,18 @@ class LiveScoreController extends Controller
             Cache::put($cacheKey, $timerState, 86400);
         }
 
+        $calcRemaining = (int)$timerState['remaining_seconds'];
+        if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
+            $elapsed = time() - $timerState['started_at'];
+            $calcRemaining = max(0, $calcRemaining - $elapsed);
+        }
+
         return new \Illuminate\Http\JsonResponse([
             'success' => true,
             'timer' => [
-                'remaining' => $timerState['remaining_seconds'],
-                'total' => $timerState['total_seconds'],
-                'is_running' => $timerState['is_running'],
+                'remaining' => $calcRemaining,
+                'total' => (int)$timerState['total_seconds'],
+                'is_running' => (bool)$timerState['is_running'],
             ],
         ]);
     }

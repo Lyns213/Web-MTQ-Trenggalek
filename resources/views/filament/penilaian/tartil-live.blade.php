@@ -897,109 +897,56 @@ let isPaused = false;
 let autoScrollTimer = null;
 let lastActiveId = null;
 
-// Audio System with MP3 + Electronic "Teeet" Buzzer
-let audioCtx = null;
-
-function getAudioContext() {
-    if (!audioCtx) {
-        var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtxClass) {
-            audioCtx = new AudioCtxClass();
-        }
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(function() {});
-    }
-    return audioCtx;
-}
+// Audio System with original MTQ MP3 files
+var audioStart = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
+var audioMid = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
+var audioEnd = new Audio('{{ asset("sounds/mtqend.mp3") }}');
 
 function unlockAudioSystem() {
-    getAudioContext();
+    [audioStart, audioMid, audioEnd].forEach(function(a) {
+        if (!a) return;
+        try {
+            var p = a.play();
+            if (p && typeof p.then === 'function') {
+                p.then(function() {
+                    a.pause();
+                    a.currentTime = 0;
+                }).catch(function() {});
+            }
+        } catch(e) {}
+    });
 }
 
 ['click', 'touchstart', 'keydown', 'mousedown'].forEach(function(evt) {
-    document.addEventListener(evt, unlockAudioSystem, { capture: true, passive: true });
+    document.addEventListener(evt, unlockAudioSystem, { once: true, passive: true });
 });
 
-// Precise AudioContext Web Audio "Teeeet" Buzzer Generator
-function playTeetBuzzer(duration, delayMs) {
+function playAudio(audio) {
+    if (!audio) return;
     try {
-        var ctx = getAudioContext();
-        if (!ctx) return;
-
-        function scheduleBuzzer() {
-            var offset = delayMs ? (delayMs / 1000) : 0;
-            var now = ctx.currentTime + offset;
-            var dur = duration || 0.35;
-
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(950, now); // 950Hz electronic timer tone
-
-            gain.gain.setValueAtTime(0.5, now);
-            gain.gain.setValueAtTime(0.5, now + dur - 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            osc.start(now);
-            osc.stop(now + dur);
+        audio.currentTime = 0;
+        var p = audio.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(function(e) {
+                console.warn('Audio play error:', e);
+            });
         }
-
-        if (ctx.state === 'suspended') {
-            ctx.resume().then(scheduleBuzzer).catch(function() {});
-        } else {
-            scheduleBuzzer();
-        }
-    } catch(e) {}
+    } catch(e) {
+        console.warn(e);
+    }
 }
 
 let playedMidSound = timerSeconds <= 60 && timerSeconds > 0;
 let playedEndSound = timerSeconds <= 0;
 
-var audioStart = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
-var audioMid = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
-var audioEnd = new Audio('{{ asset("sounds/mtqend.mp3") }}');
-
 function playBeeps(count, type) {
     unlockAudioSystem();
-
     var audio = type === 'start' ? audioStart : (type === 'mid' ? audioMid : audioEnd);
-    var played = false;
+    playAudio(audio);
+}
 
-    if (audio) {
-        try {
-            audio.currentTime = 0;
-            var p = audio.play();
-            if (p && typeof p.then === 'function') {
-                p.then(function() {
-                    played = true;
-                }).catch(function(e) {
-                    console.warn('Audio play failed, fallback buzzer:', e);
-                    var dur = type === 'start' ? 0.35 : (type === 'mid' ? 0.25 : 0.30);
-                    var gapMs = type === 'start' ? 450 : (type === 'mid' ? 480 : 520);
-                    for (var i = 0; i < count; i++) {
-                        playTeetBuzzer(dur, i * gapMs);
-                    }
-                });
-            } else {
-                played = true;
-            }
-        } catch(e) {
-            console.warn(e);
-        }
-    }
-
-    if (!played && !audio) {
-        var dur = type === 'start' ? 0.35 : (type === 'mid' ? 0.25 : 0.30);
-        var gapMs = type === 'start' ? 450 : (type === 'mid' ? 480 : 520);
-        for (var i = 0; i < count; i++) {
-            playTeetBuzzer(dur, i * gapMs);
-        }
-    }
+function showLiveToast(msg) {
+    // Disabled: Notifikasi hanya untuk panel dewan hakim, jangan tampil di layar live
 }
 
 function getRemainingSeconds() {
@@ -1033,11 +980,121 @@ let pauseResumeTimeout = null;
 let fetchSequence = 0;
 let pollTimer = null;
 
+function handleDirectSync(ev) {
+    if (!ev || ev.slug !== currentSlug) return;
+
+    if (ev.recordId && currentId && ev.recordId !== currentId) {
+        switchToParticipant(ev.recordId);
+    }
+
+    if (ev.action === 'start') {
+        lastLocalActionAt = Date.now();
+        if (!isTimerRunning) {
+            isTimerRunning = true;
+            timerSeconds = ev.remaining || totalTimerSeconds;
+            timerInitialAtStart = timerSeconds;
+            timerStartedAt = Date.now();
+            updateTimerDisplay(timerSeconds, true);
+            playBeeps(1, 'start');
+        }
+    } else if (ev.action === 'pause') {
+        lastLocalActionAt = Date.now();
+        isTimerRunning = false;
+        timerSeconds = ev.remaining !== undefined ? ev.remaining : timerSeconds;
+        timerInitialAtStart = timerSeconds;
+        updateTimerDisplay(timerSeconds, false);
+    } else if (ev.action === 'reset') {
+        lastLocalActionAt = Date.now();
+        isTimerRunning = false;
+        timerSeconds = ev.total || totalTimerSeconds;
+        timerInitialAtStart = timerSeconds;
+        playedMidSound = false;
+        playedEndSound = false;
+        updateTimerDisplay(totalTimerSeconds, false);
+    }
+}
+
+try {
+    if (window.BroadcastChannel) {
+        var bc = new BroadcastChannel('mtq_timer_channel');
+        bc.onmessage = function(e) { handleDirectSync(e.data); };
+    }
+} catch(e) {}
+
+window.addEventListener('storage', function(e) {
+    if (e.key === 'mtq_timer_sync_event' && e.newValue) {
+        try { handleDirectSync(JSON.parse(e.newValue)); } catch(err) {}
+    }
+});
+
+function pollFastTimerStatus() {
+    fetch(getAppBasePath() + '/mtq-timer-status')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (!data || !data.timers) return;
+            var tInfo = data.timers[currentSlug];
+            if (!tInfo) return;
+
+            // Jika ada aksi sinkronisasi dalam 4 detik terakhir, tahan agar respon server yang tertinggal tidak mereset timer
+            var timeSinceAction = Date.now() - lastLocalActionAt;
+            if (timeSinceAction < 4000 && isTimerRunning !== Boolean(tInfo.is_running)) {
+                return;
+            }
+
+            if (tInfo.record_id && currentId && tInfo.record_id !== currentId) {
+                currentId = tInfo.record_id;
+                fetchData(currentId);
+                return;
+            }
+
+            if (tInfo.is_running) {
+                if (!isTimerRunning) {
+                    isTimerRunning = true;
+                    timerSeconds = tInfo.remaining;
+                    timerInitialAtStart = tInfo.remaining;
+                    timerStartedAt = Date.now();
+                    updateTimerDisplay(timerSeconds, true);
+                    playBeeps(1, 'start');
+                } else if (Math.abs(timerSeconds - tInfo.remaining) > 3) {
+                    timerSeconds = tInfo.remaining;
+                    timerInitialAtStart = tInfo.remaining;
+                    timerStartedAt = Date.now();
+                }
+            } else {
+                var timeSinceAction = Date.now() - lastLocalActionAt;
+                if (timeSinceAction < 4000) {
+                    return;
+                }
+
+                if (isTimerRunning) {
+                    if (tInfo.remaining >= totalTimerSeconds - 1) {
+                        isTimerRunning = false;
+                        timerSeconds = totalTimerSeconds;
+                        timerInitialAtStart = totalTimerSeconds;
+                        playedMidSound = false;
+                        playedEndSound = false;
+                        updateTimerDisplay(totalTimerSeconds, false);
+                    } else {
+                        isTimerRunning = false;
+                        timerSeconds = tInfo.remaining;
+                        timerInitialAtStart = tInfo.remaining;
+                        updateTimerDisplay(timerSeconds, false);
+                    }
+                } else if (tInfo.remaining >= totalTimerSeconds - 1 && timerSeconds !== totalTimerSeconds) {
+                    timerSeconds = totalTimerSeconds;
+                    timerInitialAtStart = totalTimerSeconds;
+                    updateTimerDisplay(totalTimerSeconds, false);
+                }
+            }
+        })
+        .catch(function() {});
+}
+
 function restartPollTimer() {
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(function() {
         fetchData();
-    }, 2000);
+    }, 2500);
 }
 
 function highlightActiveLeaderboard(id) {
@@ -1514,19 +1571,28 @@ function fetchData(forcedId, setActive) {
                         }
                     } else {
                         // Server tidak berjalan (jeda / reset dari dewan hakim)
-                        // Beri toleransi waktu 3.5 detik untuk respon lama jika timer baru saja distart secara lokal
                         var timeSinceAction = Date.now() - lastLocalActionAt;
-                        if (timeSinceAction > 3500) {
-                            if (isTimerRunning) {
+                        if (timeSinceAction < 4000) {
+                            return;
+                        }
+                        if (isTimerRunning) {
+                            if (serverRemaining >= totalTimerSeconds - 1) {
+                                isTimerRunning = false;
+                                timerSeconds = totalTimerSeconds;
+                                timerInitialAtStart = totalTimerSeconds;
+                                playedMidSound = false;
+                                playedEndSound = false;
+                                updateTimerDisplay(totalTimerSeconds, false);
+                            } else {
                                 isTimerRunning = false;
                                 timerSeconds = serverRemaining;
                                 timerInitialAtStart = serverRemaining;
                                 updateTimerDisplay(timerSeconds, false);
-                            } else if (Math.abs(timerSeconds - serverRemaining) > 1) {
-                                timerSeconds = serverRemaining;
-                                timerInitialAtStart = serverRemaining;
-                                updateTimerDisplay(timerSeconds, false);
                             }
+                        } else if (serverRemaining >= totalTimerSeconds - 1 && timerSeconds !== totalTimerSeconds) {
+                            timerSeconds = totalTimerSeconds;
+                            timerInitialAtStart = totalTimerSeconds;
+                            updateTimerDisplay(totalTimerSeconds, false);
                         }
                     }
                 }
@@ -1600,6 +1666,7 @@ function toggleTimer() {
         playBeeps(1, 'start'); // 1 bel saat mulai
         tickTimer();
         fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/start?id=' + currentId);
+        showLiveToast('Timer Dimulai');
     } else {
         // Pause
         timerSeconds = getRemainingSeconds();
@@ -1607,6 +1674,7 @@ function toggleTimer() {
         timerInitialAtStart = timerSeconds;
         updateTimerDisplay(timerSeconds, false);
         fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/pause?id=' + currentId);
+        showLiveToast('Timer Dijeda');
     }
 }
 
@@ -1621,6 +1689,7 @@ function resetTimer() {
     playedEndSound = false;
     updateTimerDisplay(totalTimerSeconds, false);
     fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/reset?id=' + currentId);
+    showLiveToast('Timer Direset');
 }
 
 function toggleFullscreen() {
@@ -1653,6 +1722,7 @@ updateTimerDisplay(timerSeconds, isTimerRunning);
 fetchData();
 initAutoScroll();
 restartPollTimer();
+setInterval(pollFastTimerStatus, 350);
 setInterval(function() {
     if (isTimerRunning) {
         tickTimer();
