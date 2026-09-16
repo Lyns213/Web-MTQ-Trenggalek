@@ -38,6 +38,22 @@ class NilaiTartilResource extends Resource
 
     public static function form(Form $form): Form
     {
+        $calcScript = '
+            let tEl = document.querySelector(\'input[id$="tajwid"], input[name$="tajwid"]\');
+            let iEl = document.querySelector(\'input[id$="irama_dan_suara"], input[name$="irama_dan_suara"]\');
+            let fEl = document.querySelector(\'input[id$="fashahah"], input[name$="fashahah"]\');
+            let totEl = document.querySelector(\'input[id$="total"], input[name$="total"]\');
+
+            let t = parseFloat(tEl ? tEl.value : 0) || 0;
+            let i = parseFloat(iEl ? iEl.value : 0) || 0;
+            let f = parseFloat(fEl ? fEl.value : 0) || 0;
+
+            if (totEl) {
+                totEl.value = (t + i + f).toFixed(2);
+                totEl.dispatchEvent(new Event(\'input\', { bubbles: true }));
+            }
+        ';
+
         return $form
             ->schema([
                 Split::make([
@@ -50,60 +66,30 @@ class NilaiTartilResource extends Resource
                         TextInput::make('tajwid')
                             ->numeric()
                             ->default(0)
-                            ->live(onBlur: true)
+                            ->minValue(0)
                             ->maxValue(40)
                             ->helperText(new HtmlString('<strong>Petunjuk :</strong> Input nilai maksimal 40'))
-                            ->afterStateUpdated(function ($state, callable $set, Get $get) {
-                                if ($state > 40) {
-                                    Notification::make()
-                                        ->title(('Nilai melebihi batas maksimum'))
-                                        ->danger()
-                                        ->body('Maksimal nilai untuk Tajwid adalah 40')
-                                        ->send();
-                                }
-                                $irama_dan_suara = floatval($get('irama_dan_suara'));
-                                $fashahah = floatval($get('fashahah'));
-                                $total = floatval($state) + $irama_dan_suara + $fashahah;
-                                $set('total', floatval($total));
-                            }),
+                            ->extraInputAttributes([
+                                'oninput' => "if(parseFloat(this.value)>40){this.value=40;} {$calcScript}",
+                            ]),
                         TextInput::make('irama_dan_suara')
                             ->numeric()
                             ->default(0)
-                            ->live(onBlur: true)
+                            ->minValue(0)
                             ->maxValue(30)
                             ->helperText(new HtmlString('<strong>Petunjuk :</strong> Input nilai maksimal 30'))
-                            ->afterStateUpdated(function ($state, callable $set, Get $get) {
-                                if ($state > 30) {
-                                    Notification::make()
-                                        ->title(('Nilai melebihi batas maksimum'))
-                                        ->danger()
-                                        ->body('Maksimal nilai untuk Irama dan Suara adalah 30')
-                                        ->send();
-                                }
-                                $tajwid = floatval($get('tajwid'));
-                                $fashahah = floatval($get('fashahah'));
-                                $total = floatval($state) + $tajwid + $fashahah;
-                                $set('total', floatval($total));
-                            }),
+                            ->extraInputAttributes([
+                                'oninput' => "if(parseFloat(this.value)>30){this.value=30;} {$calcScript}",
+                            ]),
                         TextInput::make('fashahah')
                             ->numeric()
                             ->default(0)
-                            ->live(onBlur: true)
+                            ->minValue(0)
                             ->maxValue(30)
                             ->helperText(new HtmlString('<strong>Petunjuk :</strong> Input nilai maksimal 30'))
-                            ->afterStateUpdated(function ($state, callable $set, Get $get) {
-                                if ($state > 30) {
-                                    Notification::make()
-                                        ->title(('Nilai melebihi batas maksimum'))
-                                        ->danger()
-                                        ->body('Maksimal nilai untuk Fashahah adalah 30')
-                                        ->send();
-                                }
-                                $tajwid = floatval($get('tajwid'));
-                                $irama_dan_suara = floatval($get('irama_dan_suara'));
-                                $total = floatval($state) + $tajwid + $irama_dan_suara;
-                                $set('total', floatval($total));
-                            }),
+                            ->extraInputAttributes([
+                                'oninput' => "if(parseFloat(this.value)>30){this.value=30;} {$calcScript}",
+                            ]),
                     ]),
                     Section::make([
                         TextInput::make('total')
@@ -236,11 +222,12 @@ class NilaiTartilResource extends Resource
                     ->tooltip(fn ($record) => ($record->total == 0 || $record->total == null) ? 'Input Nilai' : 'Lihat Nilai')
                     ->icon(fn ($record) => ($record->total == 0 || $record->total == null) ? 'heroicon-o-plus' : 'heroicon-o-eye')
                     ->color(fn ($record) => ($record->total == 0 || $record->total == null) ? 'success' : 'info')
+                    ->visible(fn ($record) => Cache::get('mtq_live_active_tartil') == $record->id)
                     ->successNotificationTitle('Nilai berhasil disimpan')
                     ->using(function (NilaiTartil $record, array $data): NilaiTartil {
-                        $tajwid = floatval($data['tajwid'] ?? 0);
-                        $irama = floatval($data['irama_dan_suara'] ?? 0);
-                        $fashahah = floatval($data['fashahah'] ?? 0);
+                        $tajwid = min(40, max(0, floatval($data['tajwid'] ?? 0)));
+                        $irama = min(30, max(0, floatval($data['irama_dan_suara'] ?? 0)));
+                        $fashahah = min(30, max(0, floatval($data['fashahah'] ?? 0)));
                         $total = $tajwid + $irama + $fashahah;
 
                         $record->tajwid = $tajwid;
