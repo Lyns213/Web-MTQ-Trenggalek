@@ -993,14 +993,45 @@ function playTeetBuzzer(duration, delayMs) {
 let playedMidSound = timerSeconds <= 60 && timerSeconds > 0;
 let playedEndSound = timerSeconds <= 0;
 
+var audioStart = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
+var audioMid = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
+var audioEnd = new Audio('{{ asset("sounds/mtqend.mp3") }}');
+
 function playBeeps(count, type) {
     unlockAudioSystem();
 
-    var dur = type === 'start' ? 0.35 : (type === 'mid' ? 0.25 : 0.30);
-    var gapMs = type === 'start' ? 450 : (type === 'mid' ? 480 : 520);
+    var audio = type === 'start' ? audioStart : (type === 'mid' ? audioMid : audioEnd);
+    var played = false;
 
-    for (var i = 0; i < count; i++) {
-        playTeetBuzzer(dur, i * gapMs);
+    if (audio) {
+        try {
+            audio.currentTime = 0;
+            var p = audio.play();
+            if (p && typeof p.then === 'function') {
+                p.then(function() {
+                    played = true;
+                }).catch(function(e) {
+                    console.warn('Audio play failed, fallback buzzer:', e);
+                    var dur = type === 'start' ? 0.35 : (type === 'mid' ? 0.25 : 0.30);
+                    var gapMs = type === 'start' ? 450 : (type === 'mid' ? 480 : 520);
+                    for (var i = 0; i < count; i++) {
+                        playTeetBuzzer(dur, i * gapMs);
+                    }
+                });
+            } else {
+                played = true;
+            }
+        } catch(e) {
+            console.warn(e);
+        }
+    }
+
+    if (!played && !audio) {
+        var dur = type === 'start' ? 0.35 : (type === 'mid' ? 0.25 : 0.30);
+        var gapMs = type === 'start' ? 450 : (type === 'mid' ? 480 : 520);
+        for (var i = 0; i < count; i++) {
+            playTeetBuzzer(dur, i * gapMs);
+        }
     }
 }
 
@@ -1572,11 +1603,15 @@ function fetchData(forcedId) {
                 if (serverIsRunning) {
                     // Timer sedang aktif dijalankan di panel dewan hakim
                     if (!isTimerRunning || Math.abs(timerSeconds - serverRemaining) > 2) {
+                        var justStarted = !isTimerRunning;
                         isTimerRunning = true;
                         timerSeconds = serverRemaining;
                         timerInitialAtStart = serverRemaining;
                         timerStartedAt = Date.now();
                         updateTimerDisplay(timerSeconds, true);
+                        if (justStarted && Math.abs(serverRemaining - totalTimerSeconds) <= 2) {
+                            playBeeps(1, 'start');
+                        }
                     }
                 } else {
                     // Timer sedang dijeda atau direset di panel dewan hakim

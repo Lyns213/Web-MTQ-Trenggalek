@@ -265,10 +265,25 @@
 
 
             // File audio yang akan diputar
-            const startSound = new Audio('/sounds/mtqstart.mp3');
-            const sound60Seconds = new Audio('/sounds/mtqmid.mp3');
-            const sound30Seconds = new Audio('/sounds/mtqmid.mp3');
-            const timeUpSound = new Audio('/sounds/mtqend.mp3');
+            const startSound = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
+            const sound60Seconds = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
+            const sound30Seconds = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
+            const timeUpSound = new Audio('{{ asset("sounds/mtqend.mp3") }}');
+
+            function playSound(audio) {
+                if (!audio) return;
+                try {
+                    audio.currentTime = 0;
+                    var p = audio.play();
+                    if (p && typeof p.catch === 'function') {
+                        p.catch(function(e) {
+                            console.warn('Audio play failed:', e);
+                        });
+                    }
+                } catch(e) {
+                    console.warn(e);
+                }
+            }
 
 
             // Inisialisasi Doughnut Chart untuk Timer
@@ -292,7 +307,7 @@
 
 
             // Fungsi untuk memperbarui tampilan timer
-            function updateTimerDisplay() {
+            function updateTimerDisplay(shouldPlaySound = false) {
                 let displayMinutes = Math.floor(timeLeft / 60);
                 let displaySeconds = timeLeft % 60;
                 timerDisplay.innerHTML = `${displayMinutes}:${displaySeconds < 10 ? '0' : ''}${displaySeconds}`;
@@ -313,48 +328,56 @@
                     timerContainer.classList.add('bg-yellow-500');
                 } else if (timeLeft <= {{ $timerInSeconds - 1 }}) {
                     timerContainer.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-white');
-                    timerContainer.classList.add('bg-green-400')
+                    timerContainer.classList.add('bg-green-400');
                 } else {
                     timerContainer.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-green-400');
                     timerContainer.classList.add('bg-white');
                 }
 
-
-                playSoundBasedOnTime(); // Cek waktu tersisa untuk memainkan suara
+                if (shouldPlaySound) {
+                    playSoundBasedOnTime(); // Cek waktu tersisa untuk memainkan suara
+                }
             }
 
 
             // Fungsi untuk memutar suara berdasarkan waktu yang tersisa
             function playSoundBasedOnTime() {
                 if (timeLeft === 60) {
-                    sound60Seconds.play();
+                    playSound(sound60Seconds);
                 }
                 // if (timeLeft === 30) {
-                //     sound30Seconds.play();
+                //     playSound(sound30Seconds);
                 // }
-                if (timeLeft === 1) {
-                    timeUpSound.play();
+                if (timeLeft === 0) {
+                    playSound(timeUpSound);
                 }
             }
 
 
             // Fungsi untuk memulai timer
             function startTimer() {
+                if (timeLeft <= 0) {
+                    timeLeft = totalTime;
+                    updateTimerDisplay(false);
+                }
                 if (!isRunning) {
                     isRunning = true;
                     localStorage.setItem('isRunning', true); // Simpan status berjalan
-                    // startSound.play();
+                    playSound(startSound);
                     countdown = setInterval(() => {
                         if (timeLeft > 0) {
                             timeLeft--;
-                            updateTimerDisplay();
+                            updateTimerDisplay(true);
                             localStorage.setItem('timeLeft', timeLeft); // Simpan waktu yang tersisa
+                            if (timeLeft === 0) {
+                                clearInterval(countdown);
+                                isRunning = false;
+                                localStorage.setItem('isRunning', false); // Reset status
+                            }
                         } else {
                             clearInterval(countdown);
                             isRunning = false;
                             localStorage.setItem('isRunning', false); // Reset status
-                            alert('Waktu habis!');
-                            restartTimer();
                         }
                     }, 1000);
                 }
@@ -373,10 +396,10 @@
             function restartTimer() {
                 clearInterval(countdown);
                 timeLeft = totalTime;
-                updateTimerDisplay();
                 isRunning = false;
                 localStorage.setItem('timeLeft', timeLeft); // Reset waktu di localStorage
                 localStorage.setItem('isRunning', false); // Reset status di localStorage
+                updateTimerDisplay(false);
             }
 
             // function nextBack() {
@@ -392,7 +415,6 @@
             // Event Listeners untuk tombol kontrol
             startBtn.addEventListener('click', () => {
                 startTimer();
-                startSound.play();
             });
             pauseBtn.addEventListener('click', pauseTimer);
             restartBtn.addEventListener('click', restartTimer);
@@ -401,12 +423,28 @@
 
 
             // Inisialisasi tampilan timer pertama kali
-            updateTimerDisplay();
+            updateTimerDisplay(false);
 
 
             // Jalankan timer otomatis jika halaman di-refresh dan timer belum habis
-            if (localStorage.getItem('isRunning') === 'true') {
-                startTimer();
+            if (localStorage.getItem('isRunning') === 'true' && timeLeft > 0) {
+                isRunning = true;
+                countdown = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateTimerDisplay(true);
+                        localStorage.setItem('timeLeft', timeLeft);
+                        if (timeLeft === 0) {
+                            clearInterval(countdown);
+                            isRunning = false;
+                            localStorage.setItem('isRunning', false);
+                        }
+                    } else {
+                        clearInterval(countdown);
+                        isRunning = false;
+                        localStorage.setItem('isRunning', false);
+                    }
+                }, 1000);
             }
 
 

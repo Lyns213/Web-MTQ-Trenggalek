@@ -180,6 +180,21 @@
 var timerSec = {{ $timerInSeconds }}, initSec = timerSec, running = false, interval;
 var timerEl = document.getElementById('timerDisplay'), barEl = document.getElementById('timerBar');
 
+var soundStart = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
+var soundMid = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
+var soundEnd = new Audio('{{ asset("sounds/mtqend.mp3") }}');
+
+function playAudio(audio) {
+    if (!audio) return;
+    try {
+        audio.currentTime = 0;
+        var p = audio.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(function(e) { console.warn(e); });
+        }
+    } catch(e) { console.warn(e); }
+}
+
 function fmt(s) { var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return [h,m,sec].map(function(v){return v<10?'0'+v:v}).join(':'); }
 function render() {
     timerEl.textContent = fmt(timerSec);
@@ -189,9 +204,35 @@ function render() {
     if (pct <= 20) { timerEl.classList.add('danger'); barEl.classList.add('danger'); }
     else if (pct <= 50) { timerEl.classList.add('warning'); barEl.classList.add('warning'); }
 }
-function tick() { if (timerSec > 0) { timerSec--; render(); } else { clearInterval(interval); running = false; alert('Waktu habis!'); } }
+function tick() {
+    if (timerSec > 0) {
+        timerSec--;
+        render();
+        if (timerSec === 60) {
+            playAudio(soundMid);
+        }
+        if (timerSec === 0) {
+            clearInterval(interval);
+            running = false;
+            playAudio(soundEnd);
+        }
+    } else {
+        clearInterval(interval);
+        running = false;
+    }
+}
 
-document.getElementById('startBtn').onclick = function() { if (!running && timerSec > 0) { running = true; interval = setInterval(tick, 1000); } };
+document.getElementById('startBtn').onclick = function() {
+    if (timerSec <= 0) {
+        timerSec = initSec;
+        render();
+    }
+    if (!running && timerSec > 0) {
+        running = true;
+        playAudio(soundStart);
+        interval = setInterval(tick, 1000);
+    }
+};
 document.getElementById('pauseBtn').onclick = function() { running = false; clearInterval(interval); };
 document.getElementById('resetBtn').onclick = function() { running = false; clearInterval(interval); timerSec = initSec; render(); };
 
