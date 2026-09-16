@@ -255,13 +255,22 @@ class LiveScoreController extends Controller
         $cfg = self::$config[$slug] ?? self::$config['tartil'];
         $records = $this->getRecords($slug);
 
-        $liveActiveId = Cache::get('mtq_live_active_' . $slug);
-        if ($liveActiveId && (!request()->has('preview') || !$id)) {
-            $id = $liveActiveId;
+        if (request()->has('set_active') && $id) {
+            Cache::put('mtq_live_active_' . $slug, (int)$id, 86400);
+            $liveActiveId = (int)$id;
+        } else {
+            $liveActiveId = Cache::get('mtq_live_active_' . $slug);
+            if ($liveActiveId && (!request()->has('preview') || !$id)) {
+                $id = $liveActiveId;
+            }
         }
 
         if (!$id) {
             $currentRecord = $records->first();
+            if ($currentRecord) {
+                Cache::put('mtq_live_active_' . $slug, $currentRecord->id, 86400);
+                $liveActiveId = $currentRecord->id;
+            }
         } else {
             $currentRecord = $records->firstWhere('id', (int)$id);
             if (!$currentRecord) {
@@ -274,6 +283,10 @@ class LiveScoreController extends Controller
             }
             if (!$currentRecord) {
                 $currentRecord = $records->first();
+                if ($currentRecord) {
+                    Cache::put('mtq_live_active_' . $slug, $currentRecord->id, 86400);
+                    $liveActiveId = $currentRecord->id;
+                }
             }
         }
 
@@ -399,7 +412,8 @@ class LiveScoreController extends Controller
             $totalSeconds = 300;
         }
 
-        $cacheKey = 'mtq_timer_' . $slug . '_' . $currentRecord->id;
+        $activeTimerId = $liveActiveId ?: $currentRecord->id;
+        $cacheKey = 'mtq_timer_' . $slug . '_' . $activeTimerId;
         $timerState = Cache::get($cacheKey);
 
         if (!$timerState) {
@@ -409,7 +423,7 @@ class LiveScoreController extends Controller
                 'is_running' => false,
                 'started_at' => null,
             ];
-            Cache::put($cacheKey, $timerState, 3600);
+            Cache::put($cacheKey, $timerState, 86400);
         }
 
         if ($timerState['is_running'] && $timerState['started_at']) {
@@ -420,7 +434,7 @@ class LiveScoreController extends Controller
                 $timerState['is_running'] = false;
                 $timerState['started_at'] = null;
             }
-            Cache::put($cacheKey, $timerState, 3600);
+            Cache::put($cacheKey, $timerState, 86400);
         }
 
         $remaining = $timerState['remaining_seconds'];
@@ -493,10 +507,13 @@ class LiveScoreController extends Controller
 
     public function controlTimer(Request $request, $slug = 'tartil', $action = 'start')
     {
-        $id = $request->input('id');
+        $slug = strtolower($slug);
+        $liveActiveId = Cache::get('mtq_live_active_' . $slug);
+        $id = $liveActiveId ?: $request->input('id');
         if (!$id) return response()->json(['error' => 'No ID'], 400);
 
-        $slug = strtolower($slug);
+        Cache::put('mtq_live_active_' . $slug, $id, 86400);
+
         $cfg = self::$config[$slug] ?? self::$config['tartil'];
         $cacheKey = 'mtq_timer_' . $slug . '_' . $id;
         $timerState = Cache::get($cacheKey);
@@ -519,7 +536,7 @@ class LiveScoreController extends Controller
             }
             $timerState['is_running'] = true;
             $timerState['started_at'] = time();
-            Cache::put($cacheKey, $timerState, 3600);
+            Cache::put($cacheKey, $timerState, 86400);
         } elseif ($action === 'pause') {
             if ($timerState['is_running'] && $timerState['started_at']) {
                 $elapsed = time() - $timerState['started_at'];
@@ -527,12 +544,12 @@ class LiveScoreController extends Controller
             }
             $timerState['is_running'] = false;
             $timerState['started_at'] = null;
-            Cache::put($cacheKey, $timerState, 3600);
+            Cache::put($cacheKey, $timerState, 86400);
         } elseif ($action === 'reset') {
             $timerState['is_running'] = false;
             $timerState['started_at'] = null;
             $timerState['remaining_seconds'] = $timerState['total_seconds'];
-            Cache::put($cacheKey, $timerState, 3600);
+            Cache::put($cacheKey, $timerState, 86400);
         }
 
         return new \Illuminate\Http\JsonResponse([

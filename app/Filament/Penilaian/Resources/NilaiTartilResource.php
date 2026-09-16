@@ -259,7 +259,7 @@ class NilaiTartilResource extends Resource
                     ->icon('heroicon-o-tv')
                     ->color('info')
                     ->action(function ($record) {
-                        Cache::put('mtq_live_active_tartil', $record->id, 3600);
+                        Cache::put('mtq_live_active_tartil', $record->id, 86400);
                         \Filament\Notifications\Notification::make()
                             ->title('Peserta ditampilkan di live score')
                             ->success()
@@ -312,38 +312,38 @@ class NilaiTartilResource extends Resource
                             $timerState['started_at'] = null;
                             Notification::make()->title('Timer dijeda')->warning()->send();
                         } else {
-                            if ($timerState['remaining_seconds'] > 0) {
-                                $timerState['is_running'] = true;
-                                $timerState['started_at'] = time();
-                                Cache::put('mtq_live_active_tartil', $record->id, 3600);
-                                Notification::make()->title('Timer dimulai')->success()->send();
-                            }
+                        if ($timerState['remaining_seconds'] > 0) {
+                            $timerState['is_running'] = true;
+                            $timerState['started_at'] = time();
+                            Cache::put('mtq_live_active_tartil', $record->id, 86400);
+                            Notification::make()->title('Timer dimulai')->success()->send();
                         }
+                    }
 
-                        Cache::put($cacheKey, $timerState, 3600);
-                    }),
+                    Cache::put($cacheKey, $timerState, 86400);
+                }),
 
-                Action::make('resetTimer')
-                    ->label('')
-                    ->tooltip('Reset Waktu')
-                    ->icon('heroicon-o-arrow-path')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Reset Waktu')
-                    ->modalDescription('Apakah Anda yakin ingin mereset waktu?')
-                    ->modalSubmitActionLabel('Reset Waktu')
-                    ->action(function ($record) {
-                        $cacheKey = 'mtq_timer_tartil_' . $record->id;
-                        $timerState = Cache::get($cacheKey);
+            Action::make('resetTimer')
+                ->label('')
+                ->tooltip('Reset Waktu')
+                ->icon('heroicon-o-arrow-path')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Reset Waktu')
+                ->modalDescription('Apakah Anda yakin ingin mereset waktu?')
+                ->modalSubmitActionLabel('Reset Waktu')
+                ->action(function ($record) {
+                    $cacheKey = 'mtq_timer_tartil_' . $record->id;
+                    $timerState = Cache::get($cacheKey);
 
-                        if ($timerState) {
-                            $timerState['is_running'] = false;
-                            $timerState['started_at'] = null;
-                            $timerState['remaining_seconds'] = $timerState['total_seconds'];
-                            Cache::put($cacheKey, $timerState, 3600);
-                            Notification::make()->title('Timer direset')->danger()->send();
-                        }
-                    }),
+                    if ($timerState) {
+                        $timerState['is_running'] = false;
+                        $timerState['started_at'] = null;
+                        $timerState['remaining_seconds'] = $timerState['total_seconds'];
+                        Cache::put($cacheKey, $timerState, 86400);
+                        Notification::make()->title('Timer direset')->danger()->send();
+                    }
+                }),
             ])
             ->recordClasses(fn ($record) => (Cache::get('mtq_timer_tartil_' . $record->id)['is_running'] ?? false) ? 'timer-active-row' : '')
             ->bulkActions([

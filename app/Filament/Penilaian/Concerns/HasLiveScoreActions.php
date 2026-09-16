@@ -74,7 +74,7 @@ class HasLiveScoreActions
                 ->icon('heroicon-o-tv')
                 ->color('info')
                 ->action(function ($record) use ($slug) {
-                    Cache::put('mtq_live_active_' . $slug, $record->id, 3600);
+                    Cache::put('mtq_live_active_' . $slug, $record->id, 86400);
                     Notification::make()
                         ->title('Peserta ditampilkan di live score')
                         ->success()
@@ -137,12 +137,12 @@ class HasLiveScoreActions
                         if ($timerState['remaining_seconds'] > 0) {
                             $timerState['is_running'] = true;
                             $timerState['started_at'] = time();
-                            Cache::put('mtq_live_active_' . $slug, $record->id, 3600);
+                            Cache::put('mtq_live_active_' . $slug, $record->id, 86400);
                             Notification::make()->title('Timer dimulai')->success()->send();
                         }
                     }
 
-                    Cache::put($cacheKey, $timerState, 3600);
+                    Cache::put($cacheKey, $timerState, 86400);
                 }),
 
             Action::make('resetTimer')
@@ -162,7 +162,7 @@ class HasLiveScoreActions
                         $timerState['is_running'] = false;
                         $timerState['started_at'] = null;
                         $timerState['remaining_seconds'] = $timerState['total_seconds'];
-                        Cache::put($cacheKey, $timerState, 3600);
+                        Cache::put($cacheKey, $timerState, 86400);
                         Notification::make()->title('Timer direset')->danger()->send();
                     }
                 }),

@@ -487,38 +487,22 @@
             line-height: 1.1;
         }
 
-        .lb-tabs {
-            display: flex;
-            background: rgba(6, 22, 40, 0.7);
-            border: 1px solid rgba(212, 175, 55, 0.3);
+        .lb-badge-total {
+            background: rgba(6, 22, 40, 0.85);
+            border: 1px solid rgba(212, 175, 55, 0.35);
             border-radius: 8px;
-            padding: 2px;
-            gap: 2px;
-        }
-
-        .lb-tab {
-            background: transparent;
-            border: none;
-            color: #94a3b8;
+            padding: 4px 10px;
             font-family: 'Montserrat', sans-serif;
             font-size: 10px;
             font-weight: 800;
-            padding: 4px 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            letter-spacing: 0.5px;
-        }
-
-        .lb-tab.active {
-            background: #d4af37;
-            color: #071524;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            color: #e5b958;
+            letter-spacing: 1px;
+            white-space: nowrap;
         }
 
         .lb-table-head {
             display: grid;
-            grid-template-columns: 30px 1fr 78px;
+            grid-template-columns: 46px 1fr 78px;
             align-items: center;
             padding: 6px 10px 4px;
             font-family: 'Montserrat', sans-serif;
@@ -555,21 +539,16 @@
 
         .lb-item {
             display: grid;
-            grid-template-columns: 24px 1fr 68px;
+            grid-template-columns: 46px 1fr 78px;
             align-items: center;
             padding: 5px 8px;
             background: rgba(13, 40, 67, 0.55);
             border: 1px solid rgba(255, 255, 255, 0.07);
             border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: default;
+            user-select: none;
+            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
             position: relative;
-        }
-
-        .lb-item:hover {
-            background: rgba(212, 175, 55, 0.18);
-            border-color: rgba(212, 175, 55, 0.4);
-            transform: translateX(2px);
         }
 
         .lb-item.active {
@@ -578,32 +557,29 @@
             box-shadow: 0 0 14px rgba(212, 175, 55, 0.35);
         }
 
-        .lb-rank {
-            width: 22px;
-            height: 22px;
+        .lb-no-badge {
+            min-width: 40px;
+            height: 24px;
+            padding: 0 4px;
             border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Montserrat', sans-serif;
-            font-size: 10.5px;
+            font-size: 11px;
             font-weight: 900;
-            background: rgba(255, 255, 255, 0.08);
-            color: #94a3b8;
+            background: rgba(212, 175, 55, 0.16);
+            border: 1px solid rgba(212, 175, 55, 0.45);
+            color: #ffe082;
+            letter-spacing: 0.5px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
         }
 
-        .lb-rank.gold {
-            background: linear-gradient(135deg, #ffd700, #b8860b);
-            color: #0c1c2e;
-            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
-        }
-        .lb-rank.silver {
-            background: linear-gradient(135deg, #e2e8f0, #94a3b8);
-            color: #0c1c2e;
-        }
-        .lb-rank.bronze {
-            background: linear-gradient(135deg, #d97706, #92400e);
-            color: #ffffff;
+        .lb-item.active .lb-no-badge {
+            background: #d4af37;
+            color: #071524;
+            border-color: #ffe082;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
         }
 
         .lb-info {
@@ -818,17 +794,16 @@
     <div class="card-leaderboard">
         <div class="lb-header">
             <div class="lb-title-group">
-                <span class="lb-sub">KLASEMEN NILAI</span>
+                <span class="lb-sub">DAFTAR PESERTA</span>
                 <h3 class="lb-title">PESERTA LAIN</h3>
             </div>
-            <div class="lb-tabs">
-                <button class="lb-tab active" id="tabRank" onclick="setLeaderboardSort('rank')">RANK</button>
-                <button class="lb-tab" id="tabOrder" onclick="setLeaderboardSort('order')">NO</button>
+            <div class="lb-badge-total">
+                <span id="lbTotalCountBadge">{{ count($participants) }} PESERTA</span>
             </div>
         </div>
 
         <div class="lb-table-head">
-            <span>#</span>
+            <span>NO</span>
             <span>PESERTA</span>
             <span style="text-align: right;">SKOR</span>
         </div>
@@ -837,10 +812,7 @@
             @php
                 $sortedParticipants = $participants;
                 usort($sortedParticipants, function($a, $b) {
-                    if (($b['total'] ?? 0) != ($a['total'] ?? 0)) {
-                        return ($b['total'] ?? 0) <=> ($a['total'] ?? 0);
-                    }
-                    return strnatcmp($a['no_peserta'] ?? '', $b['no_peserta'] ?? '');
+                    return strnatcasecmp($a['no_peserta'] ?? '', $b['no_peserta'] ?? '');
                 });
                 $sudahCount = 0;
             @endphp
@@ -848,15 +820,10 @@
                 @php
                     $isCur = ($curr && ($p['id'] == ($curr['id'] ?? null)));
                     $hasScore = (($p['total'] ?? 0) > 0);
-                    $rankClass = '';
                     if ($hasScore) {
                         $sudahCount++;
-                        if ($idx === 0) $rankClass = 'gold';
-                        elseif ($idx === 1) $rankClass = 'silver';
-                        elseif ($idx === 2) $rankClass = 'bronze';
                     }
 
-                    $noPrefix = 'No. ' . ($p['no_peserta'] ?? '-') . ' • ';
                     $fieldsHtml = '';
                     if ($hasScore && !empty($p['fields'])) {
                         $fieldsHtml .= '<span class="lb-scores-tag">';
@@ -872,11 +839,11 @@
                         $fieldsHtml .= '</span>';
                     }
                 @endphp
-                <div class="lb-item {{ $isCur ? 'active' : '' }}" data-id="{{ $p['id'] }}" onclick="selectParticipant({{ $p['id'] }})">
-                    <div class="lb-rank {{ $rankClass }}">{{ $idx + 1 }}</div>
+                <div class="lb-item {{ $isCur ? 'active' : '' }}" data-id="{{ $p['id'] }}">
+                    <div class="lb-no-badge">{{ $p['no_peserta'] ?? '-' }}</div>
                     <div class="lb-info">
                         <div class="lb-name" title="{{ $p['nama'] }}">{{ $p['nama'] }}</div>
-                        <div class="lb-meta"><span>{{ $noPrefix }}{{ $p['kecamatan'] }}</span>{!! $fieldsHtml !!}</div>
+                        <div class="lb-meta"><span>{{ $p['kecamatan'] }}</span>{!! $fieldsHtml !!}</div>
                     </div>
                     <div class="lb-score-wrap">
                         @if($hasScore)
@@ -919,11 +886,11 @@ let nextId = {{ $initialData['next']['id'] ?? 'null' }};
 let prevId = {{ $initialData['previous']['id'] ?? 'null' }};
 let totalTimerSeconds = {{ $timer['total'] ?? 300 }};
 let timerSeconds = {{ $timer['remaining'] ?? 300 }};
-let isTimerRunning = false;
+let isTimerRunning = {{ ($timer['is_running'] ?? false) ? 'true' : 'false' }};
+let lastLocalActionAt = 0;
 let timerStartedAt = Date.now();
 let timerInitialAtStart = timerSeconds;
 let allParticipantsData = @json($participants);
-let lbSortMode = 'rank';
 let scrollDirection = 1; // 1 = scroll down, -1 = scroll up
 let isHovered = false;
 let isPaused = false;
@@ -1108,15 +1075,6 @@ function highlightActiveLeaderboard(id) {
     }
 }
 
-function setLeaderboardSort(mode) {
-    lbSortMode = mode;
-    var tabRank = document.getElementById('tabRank');
-    var tabOrder = document.getElementById('tabOrder');
-    if (tabRank) tabRank.classList.toggle('active', mode === 'rank');
-    if (tabOrder) tabOrder.classList.toggle('active', mode === 'order');
-    renderLeaderboard(allParticipantsData, true);
-}
-
 function getAppBasePath() {
     var match = window.location.pathname.match(/^(.*?)\/live/i);
     return (match && match[1]) ? match[1] : '';
@@ -1192,69 +1150,6 @@ if (Array.isArray(allParticipantsData)) {
     });
 }
 
-function selectParticipant(id) {
-    if (!id || id == currentId) return;
-
-    // 1. Jeda auto scroll saat operator/user memilih peserta agar tidak beradu dengan smooth scroll
-    isPaused = true;
-    if (pauseResumeTimeout) clearTimeout(pauseResumeTimeout);
-    pauseResumeTimeout = setTimeout(function() {
-        isPaused = false;
-    }, 8000);
-
-    currentId = Number(id);
-    window.history.pushState({}, '', getAppBasePath() + '/live/' + currentSlug + '/' + currentId);
-
-    // 2. Update nextId & prevId seketika dari daftar peserta
-    var currentIndex = (allParticipantsData || []).findIndex(function(p) { return p.id == currentId; });
-    if (currentIndex !== -1) {
-        prevId = currentIndex > 0 ? allParticipantsData[currentIndex - 1].id : null;
-        nextId = currentIndex < allParticipantsData.length - 1 ? allParticipantsData[currentIndex + 1].id : null;
-    }
-
-    // 3. Langsung beri respon visual pada tabel klasemen (0ms delay)
-    highlightActiveLeaderboard(currentId);
-
-    // 4. Update data peserta seketika dari memory cache (foto, nama, nomor, asal, cabang, nilai)
-    var pData = (allParticipantsData || []).find(function(p) { return p.id == currentId; });
-    if (pData) {
-        var pNameEl = document.getElementById('pName');
-        var pNumberEl = document.getElementById('pNumber');
-        var pOriginEl = document.getElementById('pOrigin');
-        var sTotalEl = document.getElementById('sTotal');
-        var cabangTitleEl = document.getElementById('cabangTitle');
-
-        if (pNameEl) pNameEl.textContent = pData.nama || '-';
-        if (pNumberEl) pNumberEl.textContent = pData.no_peserta || '-';
-        if (pOriginEl) pOriginEl.textContent = pData.kecamatan || '-';
-        if (sTotalEl) sTotalEl.textContent = Number(pData.total || 0).toFixed(2);
-
-        if (pData.cabang && cabangTitleEl) {
-            cabangTitleEl.innerHTML = '<span class="cabang-gold">PENILAIAN LIVE</span> <span class="cabang-white">(CABANG ' + pData.cabang + ')</span>';
-        }
-
-        updateParticipantPhoto(pData.pasfoto, pData.nama);
-
-        if (pData.fields && pData.fields.length > 0) {
-            renderFields(pData.fields);
-        }
-    }
-
-    // 5. Ganti peserta: reset timer lokal ke total waktu peserta
-    isTimerRunning = false;
-    timerSeconds = totalTimerSeconds;
-    timerInitialAtStart = totalTimerSeconds;
-    playedMidSound = false;
-    playedEndSound = false;
-    updateTimerDisplay(totalTimerSeconds, false);
-
-    // 6. Reset interval polling agar tidak terjadi bentrokan request
-    restartPollTimer();
-
-    // 7. Ambil data sinkronisasi timer & status terbaru dari server
-    fetchData(currentId);
-}
-
 function formatFullLabel(label) {
     if (!label) return '';
     var words = label.toLowerCase().split(' ');
@@ -1293,18 +1188,9 @@ function renderLeaderboard(participants, forceRebuild) {
     }
 
     var list = allParticipantsData.slice();
-
-    if (lbSortMode === 'rank') {
-        list.sort(function(a, b) {
-            var diff = (b.total || 0) - (a.total || 0);
-            if (diff !== 0) return diff;
-            return ('' + (a.no_peserta || '')).localeCompare('' + (b.no_peserta || ''), undefined, { numeric: true });
-        });
-    } else {
-        list.sort(function(a, b) {
-            return ('' + (a.no_peserta || '')).localeCompare('' + (b.no_peserta || ''), undefined, { numeric: true });
-        });
-    }
+    list.sort(function(a, b) {
+        return ('' + (a.no_peserta || '')).localeCompare('' + (b.no_peserta || ''), undefined, { numeric: true });
+    });
 
     var existingItems = container.querySelectorAll('.lb-item');
     var isSameStructure = (!forceRebuild && existingItems.length === list.length);
@@ -1320,7 +1206,7 @@ function renderLeaderboard(participants, forceRebuild) {
     var sudahCount = 0;
 
     if (isSameStructure) {
-        // Smooth in-place update: Jangan hapus/buat ulang DOM agar scroll & hover tetap mulus
+        // Smooth in-place update
         list.forEach(function(p, idx) {
             var item = existingItems[idx];
             var isCurrent = (p.id === currentId);
@@ -1329,23 +1215,17 @@ function renderLeaderboard(participants, forceRebuild) {
 
             item.classList.toggle('active', isCurrent);
 
-            // Update rank badge class
-            var rankEl = item.querySelector('.lb-rank');
-            if (rankEl) {
-                rankEl.className = 'lb-rank';
-                if (hasScore && lbSortMode === 'rank') {
-                    if (idx === 0) rankEl.classList.add('gold');
-                    else if (idx === 1) rankEl.classList.add('silver');
-                    else if (idx === 2) rankEl.classList.add('bronze');
-                }
-                rankEl.textContent = (idx + 1);
+            // Update no_peserta badge (bukan ranking)
+            var noBadgeEl = item.querySelector('.lb-no-badge');
+            if (noBadgeEl) {
+                noBadgeEl.textContent = (p.no_peserta || '-');
             }
 
-            // Update meta with field scores
+            // Update meta with kecamatan + field scores
             var metaEl = item.querySelector('.lb-meta');
             if (metaEl) {
                 var chipsHtml = buildFieldChipsHtml(p.fields, hasScore);
-                var baseMeta = 'No. ' + (p.no_peserta || '-') + ' • ' + (p.kecamatan || '-');
+                var baseMeta = (p.kecamatan || '-');
                 metaEl.innerHTML = '<span>' + baseMeta + '</span>' + chipsHtml;
             }
 
@@ -1378,29 +1258,21 @@ function renderLeaderboard(participants, forceRebuild) {
             }
         });
     } else {
-        // Rebuild DOM only when structure or sort order changed
+        // Rebuild DOM
         var html = '';
         list.forEach(function(p, idx) {
             var isCurrent = (p.id === currentId);
-            var rankClass = '';
             var hasScore = (p.total && Number(p.total) > 0);
-            if (hasScore) {
-                sudahCount++;
-                if (lbSortMode === 'rank') {
-                    if (idx === 0) rankClass = 'gold';
-                    else if (idx === 1) rankClass = 'silver';
-                    else if (idx === 2) rankClass = 'bronze';
-                }
-            }
+            if (hasScore) sudahCount++;
 
             var chipsHtml = buildFieldChipsHtml(p.fields, hasScore);
-            var baseMeta = 'No. ' + (p.no_peserta || '-') + ' • ' + (p.kecamatan || '-');
+            var baseMeta = (p.kecamatan || '-');
             var scoreDisplay = hasScore
                 ? '<span class="lb-score-val">' + Number(p.total).toFixed(2) + '</span>'
                 : '<span class="lb-score-empty"></span>';
 
-            html += '<div class="lb-item ' + (isCurrent ? 'active' : '') + '" data-id="' + p.id + '" onclick="selectParticipant(' + p.id + ')">' +
-                '<div class="lb-rank ' + rankClass + '">' + (idx + 1) + '</div>' +
+            html += '<div class="lb-item ' + (isCurrent ? 'active' : '') + '" data-id="' + p.id + '">' +
+                '<div class="lb-no-badge">' + (p.no_peserta || '-') + '</div>' +
                 '<div class="lb-info">' +
                     '<div class="lb-name" title="' + (p.nama || '-') + '">' + (p.nama || '-') + '</div>' +
                     '<div class="lb-meta"><span>' + baseMeta + '</span>' + chipsHtml + '</div>' +
@@ -1418,6 +1290,10 @@ function renderLeaderboard(participants, forceRebuild) {
     var countEl = document.getElementById('lbTotalCount');
     if (countEl) {
         countEl.textContent = list.length + ' Peserta (' + sudahCount + ' dinilai)';
+    }
+    var countBadgeEl = document.getElementById('lbTotalCountBadge');
+    if (countBadgeEl) {
+        countBadgeEl.textContent = list.length + ' PESERTA';
     }
 
     var activeEl = container.querySelector('.lb-item.active');
@@ -1577,13 +1453,13 @@ function tickTimer() {
 
 let isFetchingData = false;
 
-function fetchData(forcedId) {
+function fetchData(forcedId, setActive) {
     if (isFetchingData && forcedId === undefined) return;
     isFetchingData = true;
 
     var reqSeq = ++fetchSequence;
     var isPreview = (forcedId !== undefined && forcedId !== null);
-    var url = getAppBasePath() + '/live/' + currentSlug + '/data' + (isPreview ? ('/' + Number(forcedId) + '?preview=1') : '');
+    var url = getAppBasePath() + '/live/' + currentSlug + '/data' + (isPreview ? ('/' + Number(forcedId) + (setActive ? '?set_active=1' : '?preview=1')) : '');
 
     fetch(url)
         .then(function(res) { return res.json(); })
@@ -1593,6 +1469,8 @@ function fetchData(forcedId) {
             if (reqSeq !== fetchSequence) return;
             if (isPreview && data.current && Number(data.current.id) !== Number(forcedId)) return;
 
+            var isNewParticipant = (data.current && currentId !== null && Number(data.current.id) !== currentId);
+
             updateDisplay(data);
 
             if (data.timer) {
@@ -1600,26 +1478,56 @@ function fetchData(forcedId) {
                 var serverRemaining = Number(data.timer.remaining);
                 var serverIsRunning = Boolean(data.timer.is_running);
 
-                if (serverIsRunning) {
-                    // Timer sedang aktif dijalankan di panel dewan hakim
-                    if (!isTimerRunning || Math.abs(timerSeconds - serverRemaining) > 2) {
-                        var justStarted = !isTimerRunning;
-                        isTimerRunning = true;
-                        timerSeconds = serverRemaining;
-                        timerInitialAtStart = serverRemaining;
-                        timerStartedAt = Date.now();
-                        updateTimerDisplay(timerSeconds, true);
-                        if (justStarted && Math.abs(serverRemaining - totalTimerSeconds) <= 2) {
-                            playBeeps(1, 'start');
-                        }
+                if (isNewParticipant || isPreview) {
+                    // Peserta berganti (dari Dewan Hakim atau tombol Prev/Next)
+                    currentId = Number(data.current.id);
+                    isTimerRunning = serverIsRunning;
+                    timerSeconds = serverRemaining;
+                    timerInitialAtStart = serverRemaining;
+                    timerStartedAt = Date.now();
+                    playedMidSound = (serverRemaining <= 60 && serverRemaining > 0);
+                    playedEndSound = (serverRemaining <= 0);
+                    updateTimerDisplay(timerSeconds, isTimerRunning);
+                    if (serverIsRunning && Math.abs(serverRemaining - totalTimerSeconds) <= 2) {
+                        playBeeps(1, 'start');
                     }
                 } else {
-                    // Timer sedang dijeda atau direset di panel dewan hakim
-                    if (isTimerRunning || Math.abs(timerSeconds - serverRemaining) > 1) {
-                        isTimerRunning = false;
-                        timerSeconds = serverRemaining;
-                        timerInitialAtStart = serverRemaining;
-                        updateTimerDisplay(timerSeconds, false);
+                    if (serverIsRunning) {
+                        if (!isTimerRunning) {
+                            // Dewan Hakim baru saja memulai timer
+                            isTimerRunning = true;
+                            timerSeconds = serverRemaining;
+                            timerInitialAtStart = serverRemaining;
+                            timerStartedAt = Date.now();
+                            updateTimerDisplay(timerSeconds, true);
+                            if (Math.abs(serverRemaining - totalTimerSeconds) <= 2) {
+                                playBeeps(1, 'start');
+                            }
+                        } else {
+                            // Timer sedang berjalan: jangan pernah reset display ke 5 menit!
+                            // Hanya sinkronkan offset jika drift lebih dari 4 detik
+                            if (Math.abs(timerSeconds - serverRemaining) > 4) {
+                                timerSeconds = serverRemaining;
+                                timerInitialAtStart = serverRemaining;
+                                timerStartedAt = Date.now();
+                            }
+                        }
+                    } else {
+                        // Server tidak berjalan (jeda / reset dari dewan hakim)
+                        // Beri toleransi waktu 3.5 detik untuk respon lama jika timer baru saja distart secara lokal
+                        var timeSinceAction = Date.now() - lastLocalActionAt;
+                        if (timeSinceAction > 3500) {
+                            if (isTimerRunning) {
+                                isTimerRunning = false;
+                                timerSeconds = serverRemaining;
+                                timerInitialAtStart = serverRemaining;
+                                updateTimerDisplay(timerSeconds, false);
+                            } else if (Math.abs(timerSeconds - serverRemaining) > 1) {
+                                timerSeconds = serverRemaining;
+                                timerInitialAtStart = serverRemaining;
+                                updateTimerDisplay(timerSeconds, false);
+                            }
+                        }
                     }
                 }
             }
@@ -1632,13 +1540,51 @@ function fetchData(forcedId) {
 
 function navigateParticipant(direction) {
     var targetId = direction === 'next' ? nextId : prevId;
-    if (targetId) {
-        selectParticipant(targetId);
+    if (!targetId || targetId === currentId) return;
+    switchToParticipant(targetId);
+}
+
+function switchToParticipant(id) {
+    if (!id || id === currentId) return;
+
+    isPaused = true;
+    if (pauseResumeTimeout) clearTimeout(pauseResumeTimeout);
+    pauseResumeTimeout = setTimeout(function() {
+        isPaused = false;
+    }, 8000);
+
+    currentId = Number(id);
+    window.history.pushState({}, '', getAppBasePath() + '/live/' + currentSlug + '/' + currentId);
+
+    var currentIndex = (allParticipantsData || []).findIndex(function(p) { return p.id == currentId; });
+    if (currentIndex !== -1) {
+        prevId = currentIndex > 0 ? allParticipantsData[currentIndex - 1].id : null;
+        nextId = currentIndex < allParticipantsData.length - 1 ? allParticipantsData[currentIndex + 1].id : null;
     }
+
+    highlightActiveLeaderboard(currentId);
+
+    var pData = (allParticipantsData || []).find(function(p) { return p.id == currentId; });
+    if (pData) {
+        var pNameEl = document.getElementById('pName');
+        var pNumberEl = document.getElementById('pNumber');
+        var pOriginEl = document.getElementById('pOrigin');
+        var sTotalEl = document.getElementById('sTotal');
+        if (pNameEl) pNameEl.textContent = pData.nama || '-';
+        if (pNumberEl) pNumberEl.textContent = pData.no_peserta || '-';
+        if (pOriginEl) pOriginEl.textContent = pData.kecamatan || '-';
+        if (sTotalEl) sTotalEl.textContent = Number(pData.total || 0).toFixed(2);
+        updateParticipantPhoto(pData.pasfoto, pData.nama);
+        if (pData.fields && pData.fields.length > 0) renderFields(pData.fields);
+    }
+
+    lastLocalActionAt = Date.now();
+    fetchData(currentId, true);
 }
 
 function toggleTimer() {
     if (!currentId) return;
+    lastLocalActionAt = Date.now();
 
     if (!isTimerRunning) {
         // Jika sudah di 00:00 dan klik start lagi, baru mulai ulang dari awal
@@ -1666,6 +1612,7 @@ function toggleTimer() {
 
 function resetTimer() {
     if (!currentId) return;
+    lastLocalActionAt = Date.now();
     // Manual Reset hanya saat tombol Reset Timer diklik
     isTimerRunning = false;
     timerSeconds = totalTimerSeconds;
