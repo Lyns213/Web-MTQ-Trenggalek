@@ -17,6 +17,20 @@ class TimerStatusController extends Controller
                 $cacheKey = 'mtq_timer_' . $slug . '_' . $activeId;
                 $timerState = Cache::get($cacheKey);
 
+                if (!$timerState) {
+                    $cfg = LiveScoreController::$config[$slug] ?? LiveScoreController::$config['tartil'];
+                    $defaultTimer = $cfg['timer'] ?? '00:05:00';
+                    $parts = explode(':', $defaultTimer);
+                    $totalSeconds = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
+                    $timerState = [
+                        'total_seconds' => $totalSeconds,
+                        'remaining_seconds' => $totalSeconds,
+                        'is_running' => false,
+                        'started_at' => null,
+                    ];
+                    Cache::put($cacheKey, $timerState, 86400);
+                }
+
                 if ($timerState) {
                     $remaining = (int)$timerState['remaining_seconds'];
                     if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
@@ -39,7 +53,7 @@ class TimerStatusController extends Controller
             }
         }
 
-        return response()->json([
+        return new \Illuminate\Http\JsonResponse([
             'timers' => $timers,
         ]);
     }

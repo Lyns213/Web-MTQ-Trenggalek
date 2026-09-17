@@ -514,7 +514,7 @@ class LiveScoreController extends Controller
         $slug = strtolower($slug);
         $liveActiveId = Cache::get('mtq_live_active_' . $slug);
         $id = $request->input('id') ?: $liveActiveId;
-        if (!$id) return response()->json(['error' => 'No ID'], 400);
+        if (!$id) return new \Illuminate\Http\JsonResponse(['error' => 'No ID'], 400);
 
         if ($action === 'unshow') {
             Cache::forget('mtq_live_active_' . $slug);
@@ -522,10 +522,6 @@ class LiveScoreController extends Controller
         }
 
         Cache::put('mtq_live_active_' . $slug, (int)$id, 86400);
-
-        if ($action === 'show') {
-            return new \Illuminate\Http\JsonResponse(['success' => true, 'show' => true, 'active_id' => (int)$id]);
-        }
 
         $cfg = self::$config[$slug] ?? self::$config['tartil'];
         $cacheKey = 'mtq_timer_' . $slug . '_' . $id;
@@ -541,6 +537,25 @@ class LiveScoreController extends Controller
                 'is_running' => false,
                 'started_at' => null,
             ];
+            Cache::put($cacheKey, $timerState, 86400);
+        }
+
+        if ($action === 'show') {
+            $calcRemaining = (int)$timerState['remaining_seconds'];
+            if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
+                $elapsed = time() - $timerState['started_at'];
+                $calcRemaining = max(0, $calcRemaining - $elapsed);
+            }
+            return new \Illuminate\Http\JsonResponse([
+                'success' => true,
+                'show' => true,
+                'active_id' => (int)$id,
+                'timer' => [
+                    'remaining' => $calcRemaining,
+                    'total' => (int)$timerState['total_seconds'],
+                    'is_running' => (bool)$timerState['is_running'],
+                ],
+            ]);
         }
 
         if ($action === 'start') {
@@ -588,23 +603,23 @@ class LiveScoreController extends Controller
         $slug = strtolower($slug);
         $id = $request->input('id');
         if (!$id) {
-            return response()->json(['error' => 'No ID provided'], 400);
+            return new \Illuminate\Http\JsonResponse(['error' => 'No ID provided'], 400);
         }
 
         $fields = \App\Filament\Penilaian\Concerns\HasLiveScoreActions::$cabangFields[$slug] ?? null;
         if (!$fields) {
-            return response()->json(['error' => 'Invalid slug'], 400);
+            return new \Illuminate\Http\JsonResponse(['error' => 'Invalid slug'], 400);
         }
 
         $cfg = self::$config[$slug] ?? null;
         $modelClass = $cfg ? $cfg['model'] : null;
         if (!$modelClass) {
-            return response()->json(['error' => 'Invalid model'], 400);
+            return new \Illuminate\Http\JsonResponse(['error' => 'Invalid model'], 400);
         }
 
         $record = $modelClass::find($id);
         if (!$record) {
-            return response()->json(['error' => 'Record not found'], 404);
+            return new \Illuminate\Http\JsonResponse(['error' => 'Record not found'], 404);
         }
 
         $total = 0;
@@ -693,7 +708,7 @@ class LiveScoreController extends Controller
         Cache::forget('cabang_stats_' . md5($modelClass . '_' . $selectedTahunId));
 
         $fieldKeys = array_column($fields, 'key');
-        return response()->json([
+        return new \Illuminate\Http\JsonResponse([
             'success' => true,
             'id' => $record->id,
             'total' => $total,

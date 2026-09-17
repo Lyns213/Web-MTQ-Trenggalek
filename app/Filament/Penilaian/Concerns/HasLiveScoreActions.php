@@ -32,22 +32,12 @@ class HasLiveScoreActions
 
     public static function getTimerState(string $slug, mixed $recordId, mixed $record = null): array
     {
-        $activeId = static::getActiveRecordId($slug);
-        if ($activeId != $recordId) {
-            return [
-                'total_seconds' => 300,
-                'remaining_seconds' => 300,
-                'is_running' => false,
-                'started_at' => null,
-            ];
-        }
-
         $cacheKey = 'mtq_timer_' . $slug . '_' . $recordId;
         if (!array_key_exists($cacheKey, static::$timerStateCache)) {
             $timerState = Cache::get($cacheKey);
-            if (!$timerState && $record) {
-                $cabang = $record->peserta?->cabang ?? $record->grup?->peserta?->first()?->cabang;
-                $timer = $cabang ? $cabang->timer : '00:05:00';
+            if (!$timerState) {
+                $cabang = $record?->peserta?->cabang ?? $record?->grup?->peserta?->first()?->cabang;
+                $timer = $cabang ? $cabang->timer : (\App\Http\Controllers\LiveScoreController::$config[$slug]['timer'] ?? '00:05:00');
                 $parts = explode(':', $timer);
                 if (count($parts) === 3) {
                     $totalSeconds = ((int)$parts[0] * 3600) + ((int)$parts[1] * 60) + (int)$parts[2];
@@ -95,13 +85,14 @@ class HasLiveScoreActions
     {
         return TextColumn::make('timer_live')
             ->label('Timer')
+            ->html()
+            ->alignCenter()
             ->getStateUsing(function ($record) use ($slug) {
-                if (static::getActiveRecordId($slug) != $record->id) {
-                    return '';
-                }
+                $isActive = (static::getActiveRecordId($slug) == $record->id);
                 $timerState = static::getTimerState($slug, $record->id, $record);
+                $total = (int)($timerState['total_seconds'] ?? 300);
+                $remaining = (int)($timerState['remaining_seconds'] ?? $total);
 
-                $remaining = $timerState['remaining_seconds'] ?? 300;
                 if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
                     $elapsed = time() - $timerState['started_at'];
                     $remaining = max(0, $remaining - $elapsed);
@@ -109,33 +100,20 @@ class HasLiveScoreActions
 
                 $m = floor($remaining / 60);
                 $s = $remaining % 60;
-                return sprintf('%02d:%02d', $m, $s);
-            })
-            ->badge()
-            ->color(function ($record) use ($slug) {
-                if (static::getActiveRecordId($slug) != $record->id) return null;
-                $timerState = static::getTimerState($slug, $record->id, $record);
-                return (!empty($timerState['is_running'])) ? 'success' : 'gray';
-            })
-            ->extraAttributes(function ($record) use ($slug) {
-                if (static::getActiveRecordId($slug) != $record->id) {
-                    return [];
-                }
-                $timerState = static::getTimerState($slug, $record->id, $record);
-                $remaining = $timerState['remaining_seconds'] ?? 300;
-                if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
-                    $elapsed = time() - $timerState['started_at'];
-                    $remaining = max(0, $remaining - $elapsed);
-                }
-                return [
-                    'data-remaining' => $remaining,
-                    'data-total-seconds' => $timerState['total_seconds'] ?? 300,
-                    'data-record-id' => $record->id,
-                    'data-is-running' => (!empty($timerState['is_running'])) ? 1 : 0,
-                    'data-format' => 'ms',
-                    'data-slug' => $slug,
-                    'class' => 'timer-cell timer-badge-running',
-                ];
+                $formatted = sprintf('%02d:%02d', $m, $s);
+                $isRunning = (!empty($timerState['is_running'])) ? '1' : '0';
+                $display = $isActive ? 'inline-flex' : 'none';
+
+                return '<span class="timer-cell" '
+                    . 'data-slug="' . htmlspecialchars($slug, ENT_QUOTES) . '" '
+                    . 'data-record-id="' . (int)$record->id . '" '
+                    . 'data-total-seconds="' . $total . '" '
+                    . 'data-remaining="' . $remaining . '" '
+                    . 'data-is-running="' . $isRunning . '" '
+                    . 'data-format="ms" '
+                    . 'style="display: ' . $display . ';">'
+                    . $formatted
+                    . '</span>';
             });
     }
 

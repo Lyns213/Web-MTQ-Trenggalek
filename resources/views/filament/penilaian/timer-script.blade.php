@@ -1,3 +1,34 @@
+<style>
+@keyframes mtqSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.timer-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-weight: 700 !important;
+    font-size: 13.5px !important;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-sizing: border-box;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+}
+.timer-cell[data-is-running="1"] {
+    background: rgba(16, 185, 129, 0.18) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+}
+tr.timer-active-row {
+    background: rgba(245, 158, 11, 0.08) !important;
+}
+tr.timer-active-row:hover {
+    background: rgba(245, 158, 11, 0.12) !important;
+}
+</style>
 <script>
 (function() {
     var APP_BASE = '{{ url("/") }}';
@@ -186,6 +217,30 @@
         var row = btn ? btn.closest('tr') : null;
         var cell = row ? row.querySelector('.timer-cell') : document.querySelector('.timer-cell[data-record-id="' + recordId + '"]');
 
+        // Ensure this row's timer is visible and others are hidden
+        if (cell) {
+            cell.style.display = 'inline-flex';
+        }
+        document.querySelectorAll('.timer-cell').forEach(function(c) {
+            if (c !== cell) c.style.display = 'none';
+        });
+
+        // Ensure this row is marked active
+        if (row) {
+            document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
+                if (r !== row) r.classList.remove('timer-active-row');
+            });
+            row.classList.add('timer-active-row');
+
+            var showBtn = row.querySelector('.btn-toggle-show-live');
+            if (showBtn) {
+                document.querySelectorAll('.btn-toggle-show-live').forEach(function(b) {
+                    if (b !== showBtn) setBtnToShow(b);
+                });
+                setBtnToUnshow(showBtn);
+            }
+        }
+
         var isRunning = cell ? cell.getAttribute('data-is-running') === '1' : false;
         var rem = parseInt(cell ? cell.getAttribute('data-remaining') : '300', 10);
         var total = parseInt(cell ? cell.getAttribute('data-total-seconds') : '300', 10) || 300;
@@ -199,8 +254,12 @@
             if (cell) {
                 cell.setAttribute('data-is-running', '1');
                 cell.setAttribute('data-remaining', rem);
+                updateCellText(cell, formatTime(rem, cell.getAttribute('data-format') || 'ms'));
             }
-            if (row) row.classList.add('timer-active-row');
+            // Reset other toggle buttons
+            document.querySelectorAll('.btn-toggle-timer').forEach(function(b) {
+                if (b !== btn) setBtnToPlay(b);
+            });
             setBtnToPause(btn);
             playBeeps(1, 'start');
             showNotification('Timer dimulai', 'success');
@@ -246,28 +305,70 @@
 
     // 4. TOGGLE SHOW LIVE (TAMPILKAN / SEMBUNYIKAN PESERTA)
     window.mtqToggleShowLive = function(slug, recordId, btn) {
+        lastLocalActionAt = Date.now();
         var row = btn ? btn.closest('tr') : null;
         var isActive = btn.getAttribute('data-is-active') === '1';
+        var cell = row ? row.querySelector('.timer-cell') : document.querySelector('.timer-cell[data-record-id="' + recordId + '"]');
 
         if (isActive) {
             setBtnToShow(btn);
-            if (row) row.classList.remove('timer-active-row');
+            if (row) {
+                row.classList.remove('timer-active-row');
+                var toggleBtn = row.querySelector('.btn-toggle-timer');
+                if (toggleBtn) setBtnToPlay(toggleBtn);
+            }
+            if (cell) {
+                cell.style.display = 'none';
+                cell.setAttribute('data-is-running', '0');
+            }
             showNotification('Peserta disembunyikan dari live score', 'warning');
             broadcastTimerSync('unshow_participant', slug, null, 0, 0);
             fetch(APP_BASE + '/live/' + slug + '/timer/unshow?id=' + recordId);
         } else {
+            // Reset other buttons and rows
             document.querySelectorAll('.btn-toggle-show-live').forEach(function(b) {
                 if (b !== btn) setBtnToShow(b);
             });
             document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
                 if (r !== row) r.classList.remove('timer-active-row');
             });
+            document.querySelectorAll('.timer-cell').forEach(function(c) {
+                if (c !== cell) {
+                    c.style.display = 'none';
+                    c.setAttribute('data-is-running', '0');
+                }
+            });
 
             setBtnToUnshow(btn);
             if (row) row.classList.add('timer-active-row');
+
+            // Move & show timer on this row
+            if (cell) {
+                cell.style.display = 'inline-flex';
+                var rem = parseInt(cell.getAttribute('data-remaining') || '300', 10);
+                var format = cell.getAttribute('data-format') || 'ms';
+                updateCellText(cell, formatTime(rem, format));
+            }
+
             showNotification('Peserta ditampilkan di live score', 'success');
             broadcastTimerSync('show_participant', slug, recordId, 0, 0);
-            fetch(APP_BASE + '/live/' + slug + '/timer/show?id=' + recordId);
+            fetch(APP_BASE + '/live/' + slug + '/timer/show?id=' + recordId)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data && data.timer && cell) {
+                        cell.setAttribute('data-remaining', data.timer.remaining);
+                        cell.setAttribute('data-total-seconds', data.timer.total);
+                        cell.setAttribute('data-is-running', data.timer.is_running ? '1' : '0');
+                        var format = cell.getAttribute('data-format') || 'ms';
+                        updateCellText(cell, formatTime(data.timer.remaining, format));
+                        var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
+                        if (toggleBtn) {
+                            if (data.timer.is_running) setBtnToPause(toggleBtn);
+                            else setBtnToPlay(toggleBtn);
+                        }
+                    }
+                })
+                .catch(function() {});
         }
     };
 
@@ -382,7 +483,7 @@
         modal.style.cssText = 'display: none; position: fixed; inset: 0; z-index: 99999; align-items: center; justify-content: center; padding: 16px; font-family: inherit;';
         modal.innerHTML = [
             '<div id="mtq-modal-backdrop" style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(4px);"></div>',
-            '<div style="position: relative; z-index: 10; width: 100%; max-width: 500px; background: #ffffff; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; border: 1px solid #e2e8f0;">',
+            '<div style="position: relative; z-index: 10; width: 95%; max-width: 680px; background: #ffffff; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; border: 1px solid #e2e8f0;">',
                 '<!-- Header -->',
                 '<div style="display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9;">',
                     '<div>',
@@ -400,7 +501,7 @@
                         '<input type="text" id="mtq-field-nama" readonly style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; font-size: 13.5px; font-weight: 600; color: #64748b; outline: none;" />',
                     '</div>',
                     '<!-- Dynamic Fields Container -->',
-                    '<div id="mtq-modal-fields-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 48vh; overflow-y: auto; padding-right: 4px;"></div>',
+                    '<div id="mtq-modal-fields-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; max-height: 58vh; overflow-y: auto; padding-right: 4px;"></div>',
                     '<div id="mtq-modal-total-wrapper">',
                         '<label style="display: block; font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Total</label>',
                         '<input type="text" id="mtq-field-total" readonly style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 2px solid #10b981; border-radius: 8px; background: #ecfdf5; font-size: 18px; font-weight: 800; color: #065f46; text-align: center; outline: none;" value="0.00" />',
@@ -425,10 +526,6 @@
         if (backdrop) {
             backdrop.onclick = function() { window.mtqCloseInputNilai(); };
         }
-
-        var style = document.createElement('style');
-        style.textContent = '@keyframes mtqSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
-        document.head.appendChild(style);
     }
 
     window.mtqOpenInputNilai = function(slug, recordId, nama, scoresOrTajwid, irama, fashahah, totalVal) {
@@ -521,13 +618,10 @@
     window.mtqSubmitInputNilai = function(e) {
         if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
-        var btn = document.getElementById('mtq-btn-save-score');
-        var spinner = document.getElementById('mtq-btn-save-spinner');
-        if (btn) btn.disabled = true;
-        if (spinner) spinner.style.display = 'inline-block';
-
+        var recordId = currentEditRecord.id;
+        var slug = currentEditRecord.slug;
         var payload = new URLSearchParams();
-        payload.append('id', currentEditRecord.id);
+        payload.append('id', recordId);
 
         var fields = document.querySelectorAll('.mtq-dynamic-field');
         var total = 0;
@@ -538,7 +632,26 @@
             total += val;
         });
 
-        fetch(APP_BASE + '/simpan-nilai/' + currentEditRecord.slug, {
+        // 1. Instant close modal (0ms perceived latency!)
+        window.mtqCloseInputNilai();
+        showNotification('Nilai berhasil disimpan', 'success');
+
+        // 2. Instant optimistic DOM update for total in table
+        var row = document.querySelector('tr.timer-active-row') || document.querySelector('[data-record-id="' + recordId + '"]')?.closest('tr');
+        if (row) {
+            var cells = row.querySelectorAll('td');
+            cells.forEach(function(cell) {
+                if (cell.classList.contains('fi-ta-col-total')) {
+                    updateCellText(cell, total.toFixed(2));
+                }
+            });
+        }
+
+        // 3. Broadcast to live screen
+        broadcastTimerSync('score_saved', slug, recordId, 0, 0);
+
+        // 4. Background save
+        fetch(APP_BASE + '/simpan-nilai/' + slug, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -548,34 +661,17 @@
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
-            if (btn) btn.disabled = false;
-            if (spinner) spinner.style.display = 'none';
-
-            window.mtqCloseInputNilai();
-            showNotification('Nilai berhasil disimpan', 'success');
-            broadcastTimerSync('score_saved', currentEditRecord.slug, currentEditRecord.id, 0, 0);
-
-            // Update row in table DOM directly
-            var row = document.querySelector('tr.timer-active-row') || document.querySelector('[data-record-id="' + currentEditRecord.id + '"]')?.closest('tr');
-            if (row) {
-                var totalCell = row.querySelector('td:nth-last-child(3)') || row.querySelector('.fi-ta-col-total') || row.querySelector('td.fi-ta-cell:last-child');
-                // Also update any field cell matching
-                if (data.total !== undefined) {
-                    var cells = row.querySelectorAll('td');
-                    cells.forEach(function(cell) {
-                        var text = (cell.textContent || '').trim();
-                        // If cell looks like total or empty score
-                        if (cell.classList.contains('fi-ta-col-total')) {
-                            updateCellText(cell, Number(data.total).toFixed(2));
-                        }
-                    });
-                }
+            if (data && data.total !== undefined && row) {
+                var cells = row.querySelectorAll('td');
+                cells.forEach(function(cell) {
+                    if (cell.classList.contains('fi-ta-col-total')) {
+                        updateCellText(cell, Number(data.total).toFixed(2));
+                    }
+                });
             }
         })
         .catch(function(err) {
-            if (btn) btn.disabled = false;
-            if (spinner) spinner.style.display = 'none';
-            showNotification('Gagal menyimpan nilai', 'danger');
+            showNotification('Gagal menyimpan nilai ke server', 'danger');
         });
     };
 
@@ -608,6 +704,11 @@
 
                 if (rem <= 0) {
                     cell.setAttribute('data-is-running', '0');
+                    var row = cell.closest('tr');
+                    if (row) {
+                        var toggleBtn = row.querySelector('.btn-toggle-timer');
+                        if (toggleBtn) setBtnToPlay(toggleBtn);
+                    }
                     if (!playedEndMap[recordId]) {
                         playedEndMap[recordId] = true;
                         playBeeps(3, 'end');
@@ -617,6 +718,11 @@
                 cell.setAttribute('data-is-running', '0');
                 var format = cell.getAttribute('data-format') || 'ms';
                 updateCellText(cell, formatTime(0, format));
+                var row = cell.closest('tr');
+                if (row) {
+                    var toggleBtn = row.querySelector('.btn-toggle-timer');
+                    if (toggleBtn) setBtnToPlay(toggleBtn);
+                }
             }
         });
     }, 1000);
@@ -636,8 +742,10 @@
                     var slug = cell.getAttribute('data-slug') || 'tartil';
                     var recordId = parseInt(cell.getAttribute('data-record-id'), 10);
                     var tInfo = data.timers[slug];
+                    var row = cell.closest('tr');
 
                     if (tInfo && tInfo.record_id === recordId) {
+                        cell.style.display = 'inline-flex';
                         cell.setAttribute('data-is-running', tInfo.is_running ? '1' : '0');
                         var localRem = parseInt(cell.getAttribute('data-remaining'), 10);
                         if (isNaN(localRem) || Math.abs(localRem - tInfo.remaining) > 2) {
@@ -645,18 +753,96 @@
                             var format = cell.getAttribute('data-format') || 'ms';
                             updateCellText(cell, formatTime(tInfo.remaining, format));
                         }
-                        var row = cell.closest('tr');
                         if (row) {
+                            row.classList.add('timer-active-row');
                             var toggleBtn = row.querySelector('.btn-toggle-timer');
                             if (toggleBtn) {
                                 if (tInfo.is_running) setBtnToPause(toggleBtn);
                                 else setBtnToPlay(toggleBtn);
                             }
+                            var showBtn = row.querySelector('.btn-toggle-show-live');
+                            if (showBtn) setBtnToUnshow(showBtn);
+                        }
+                    } else if (tInfo && tInfo.record_id !== recordId) {
+                        cell.style.display = 'none';
+                        if (row) {
+                            row.classList.remove('timer-active-row');
+                            var showBtn = row.querySelector('.btn-toggle-show-live');
+                            if (showBtn) setBtnToShow(showBtn);
+                            var toggleBtn = row.querySelector('.btn-toggle-timer');
+                            if (toggleBtn) setBtnToPlay(toggleBtn);
                         }
                     }
                 });
             })
             .catch(function() {});
     }, 1000);
+
+    // 8. Instant Cross-Tab / Cross-Window Broadcast Listener
+    try {
+        if (window.BroadcastChannel) {
+            var bcListen = new BroadcastChannel('mtq_timer_channel');
+            bcListen.onmessage = function(e) {
+                var ev = e.data;
+                if (!ev) return;
+                var cells = document.querySelectorAll('.timer-cell');
+                cells.forEach(function(cell) {
+                    var slug = cell.getAttribute('data-slug') || 'tartil';
+                    if (slug !== ev.slug) return;
+                    var recordId = parseInt(cell.getAttribute('data-record-id'), 10);
+                    var row = cell.closest('tr');
+
+                    if (ev.recordId && ev.recordId === recordId) {
+                        cell.style.display = 'inline-flex';
+                        if (row) row.classList.add('timer-active-row');
+                        var showBtn = row ? row.querySelector('.btn-toggle-show-live') : null;
+                        if (showBtn) setBtnToUnshow(showBtn);
+
+                        if (ev.action === 'start') {
+                            cell.setAttribute('data-is-running', '1');
+                            if (ev.remaining !== undefined) cell.setAttribute('data-remaining', ev.remaining);
+                            var format = cell.getAttribute('data-format') || 'ms';
+                            updateCellText(cell, formatTime(parseInt(cell.getAttribute('data-remaining'), 10), format));
+                            var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
+                            if (toggleBtn) setBtnToPause(toggleBtn);
+                        } else if (ev.action === 'pause') {
+                            cell.setAttribute('data-is-running', '0');
+                            if (ev.remaining !== undefined) cell.setAttribute('data-remaining', ev.remaining);
+                            var format = cell.getAttribute('data-format') || 'ms';
+                            updateCellText(cell, formatTime(parseInt(cell.getAttribute('data-remaining'), 10), format));
+                            var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
+                            if (toggleBtn) setBtnToPlay(toggleBtn);
+                        } else if (ev.action === 'reset') {
+                            cell.setAttribute('data-is-running', '0');
+                            var total = ev.total || parseInt(cell.getAttribute('data-total-seconds') || '300', 10);
+                            cell.setAttribute('data-remaining', total);
+                            var format = cell.getAttribute('data-format') || 'ms';
+                            updateCellText(cell, formatTime(total, format));
+                            var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
+                            if (toggleBtn) setBtnToPlay(toggleBtn);
+                        }
+                    } else if (ev.recordId && ev.recordId !== recordId) {
+                        cell.style.display = 'none';
+                        if (row) {
+                            row.classList.remove('timer-active-row');
+                            var showBtn = row.querySelector('.btn-toggle-show-live');
+                            if (showBtn) setBtnToShow(showBtn);
+                            var toggleBtn = row.querySelector('.btn-toggle-timer');
+                            if (toggleBtn) setBtnToPlay(toggleBtn);
+                        }
+                    } else if (ev.action === 'unshow_participant') {
+                        cell.style.display = 'none';
+                        if (row) {
+                            row.classList.remove('timer-active-row');
+                            var showBtn = row.querySelector('.btn-toggle-show-live');
+                            if (showBtn) setBtnToShow(showBtn);
+                            var toggleBtn = row.querySelector('.btn-toggle-timer');
+                            if (toggleBtn) setBtnToPlay(toggleBtn);
+                        }
+                    }
+                });
+            };
+        }
+    } catch(e) {}
 })();
 </script>
