@@ -149,11 +149,18 @@ class HasLiveScoreActions
                 ->color(fn ($record) => (static::getActiveRecordId($slug) == $record->id) ? 'gray' : 'info')
                 ->extraAttributes(fn ($record) => [
                     'class' => 'btn-toggle-show-live',
-                    'data-is-active' => (static::getActiveRecordId($slug) == $record->id) ? '1' : '0',
                     'data-record-id' => $record->id,
                     'data-slug' => $slug,
                 ])
-                ->alpineClickHandler(fn ($record) => "window.mtqToggleShowLive('{$slug}', {$record->id}, \$el)"),
+                ->action(function ($record) use ($slug) {
+                    if (static::getActiveRecordId($slug) == $record->id) {
+                        static::setActiveRecordId($slug, null);
+                        Notification::make()->title('Peserta disembunyikan dari live score')->warning()->duration(1500)->send();
+                    } else {
+                        static::setActiveRecordId($slug, $record->id);
+                        Notification::make()->title('Peserta ditampilkan di live score')->success()->duration(1500)->send();
+                    }
+                }),
 
             Action::make('toggleTimer')
                 ->label('')

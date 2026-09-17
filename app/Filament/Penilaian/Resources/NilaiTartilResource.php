@@ -150,7 +150,11 @@ class NilaiTartilResource extends Resource
                         }
                     }),
             ])
-            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.tartil-stats-header')->render()))
+            ->heading(function () {
+                $tahunId = session('selected_tahun_id', '0');
+                $html = Cache::remember('stats_hdr_tartil_' . $tahunId, 120, fn () => view('filament.penilaian.components.tartil-stats-header')->render());
+                return new \Illuminate\Support\HtmlString($html);
+            })
             ->headerActions([
                 Action::make('viewNilaiTartil')
                     ->label('Penilaian Tartil')
@@ -170,6 +174,11 @@ class NilaiTartilResource extends Resource
                     ->tooltip(fn ($record) => ($record->total == 0 || $record->total == null) ? 'Input Nilai' : 'Lihat Nilai')
                     ->icon(fn ($record) => ($record->total == 0 || $record->total == null) ? 'heroicon-o-plus' : 'heroicon-o-eye')
                     ->color(fn ($record) => ($record->total == 0 || $record->total == null) ? 'success' : 'info')
+                    ->visible(fn ($record) => HasLiveScoreActions::getActiveRecordId('tartil') == $record->id)
+                    ->modalWidth('md')
+                    ->extraAttributes([
+                        'class' => 'btn-input-nilai',
+                    ])
                     ->successNotificationTitle('Nilai berhasil disimpan')
                     ->using(function (NilaiTartil $record, array $data): NilaiTartil {
                         $tajwid = min(40, max(0, floatval($data['tajwid'] ?? 0)));
@@ -187,6 +196,9 @@ class NilaiTartilResource extends Resource
                         $record->bobot_fashahah = $fashahah * 100;
                         $record->final_bobot = $record->bobot_tajwid + $record->bobot_irama_dan_suara + $record->bobot_fashahah + $record->bobot_total;
                         $record->save();
+
+                        Cache::forget('stats_hdr_tartil_' . session('selected_tahun_id', '0'));
+                        Cache::forget('cabang_stats_' . md5(NilaiTartil::class . '_' . session('selected_tahun_id', '0')));
 
                         return $record;
                     })

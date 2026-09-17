@@ -5,36 +5,15 @@
     var audioMid = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
     var audioEnd = new Audio('{{ asset("sounds/mtqend.mp3") }}');
 
-    function unlockAudioSystem() {
-        [audioStart, audioMid, audioEnd].forEach(function(a) {
-            if (!a) return;
-            try {
-                var p = a.play();
-                if (p && typeof p.then === 'function') {
-                    p.then(function() {
-                        a.pause();
-                        a.currentTime = 0;
-                    }).catch(function() {});
-                }
-            } catch(e) {}
-        });
-    }
-
-    ['click', 'touchstart', 'keydown', 'mousedown'].forEach(function(evt) {
-        document.addEventListener(evt, unlockAudioSystem, { once: true, passive: true });
-    });
-
     function playAudio(audio) {
         if (!audio) return;
         try {
             audio.currentTime = 0;
             var p = audio.play();
             if (p && typeof p.catch === 'function') {
-                console.warn('Audio play error:', e);
+                p.catch(function(e) {});
             }
-        } catch(e) {
-            console.warn(e);
-        }
+        } catch(e) {}
     }
 
     function playBeeps(count, type) {
@@ -259,31 +238,15 @@
     };
 
     // 4. TOGGLE SHOW LIVE (TAMPILKAN / SEMBUNYIKAN PESERTA)
-    window.mtqToggleShowLive = function(slug, recordId, btn) {
-        var row = btn ? btn.closest('tr') : null;
-        var isActive = btn.getAttribute('data-is-active') === '1';
-
-        if (isActive) {
-            setBtnToShow(btn);
-            if (row) row.classList.remove('timer-active-row');
-            showNotification('Peserta disembunyikan dari live score', 'warning');
-            broadcastTimerSync('unshow_participant', slug, null, 0, 0);
-            fetch(APP_BASE + '/live/' + slug + '/timer/unshow?id=' + recordId);
-        } else {
-            document.querySelectorAll('.btn-toggle-show-live').forEach(function(b) {
-                if (b !== btn) setBtnToShow(b);
-            });
-            document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
-                if (r !== row) r.classList.remove('timer-active-row');
-            });
-
-            setBtnToUnshow(btn);
-            if (row) row.classList.add('timer-active-row');
-            showNotification('Peserta ditampilkan di live score', 'success');
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-toggle-show-live');
+        if (btn) {
+            var slug = btn.getAttribute('data-slug') || 'tartil';
+            var recordId = btn.getAttribute('data-record-id');
             broadcastTimerSync('show_participant', slug, recordId, 0, 0);
             fetch(APP_BASE + '/live/' + slug + '/timer/show?id=' + recordId);
         }
-    };
+    }, false);
 
     // 5. FORM MODAL SUBMIT (SIMPAN NILAI)
     document.addEventListener('click', function(e) {
