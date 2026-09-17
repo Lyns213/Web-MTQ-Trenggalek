@@ -80,7 +80,7 @@ class NilaiMfqResource extends Resource
                         }
                     }),
             ])
-            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
+            ->heading(HasLiveScoreActions::getCabangStatsHeader(static::$model))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('mfq'),
                 ExportAction::make()
@@ -93,25 +93,6 @@ class NilaiMfqResource extends Resource
                     ])
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('')
-                    ->tooltip('Input Nilai')
-                    ->icon('heroicon-o-plus')
-                    ->color('success')
-                    ->successNotificationTitle('Nilai berhasil disimpan')
-                    ->modalHeading('Input Nilai')
-                    ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
-                    ->hidden(
-                        fn($record): bool => $record->total != 0 && $record->total != null
-                    ),
-                Tables\Actions\ViewAction::make()
-                    ->label('')
-                    ->tooltip('Lihat Nilai')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->hidden(
-                        fn($record): bool => $record->total == 0 || $record->total == null
-                    ),
                 ...HasLiveScoreActions::getLiveScoreTableActions('mfq'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('mfq'))

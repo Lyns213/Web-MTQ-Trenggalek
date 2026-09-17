@@ -162,49 +162,11 @@ class NilaiKontemporerResource extends Resource
                         }
                     }),
             ])
-            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
+            ->heading(HasLiveScoreActions::getCabangStatsHeader(static::$model))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('kontemporer'),
-                // ExportAction::make()
-                //     ->label(__('Download Excel'))
-                //     ->color('success')
-                //     ->exports([
-                //         ExcelExport::make()->fromTable()->except([
-                //             'index',
-                //         ]),
-                //     ])
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('')
-                    ->tooltip('Input Nilai')
-                    ->icon('heroicon-o-plus')
-                    ->color('success')
-                    ->successNotificationTitle('Nilai berhasil disimpan')
-                    ->after(function ($data, $record) {
-                        $record->bobot_total = $record->total * 100000000;
-                        $record->bobot_unsur_kaligrafi = $record->unsur_kaligrafi * 1000000;
-                        $record->bobot_unsur_seni_rupa = $record->unsur_seni_rupa * 10000;
-                        $record->bobot_sentuhan_akhir = $record->sentuhan_akhir * 100;
-                        $record->final_bobot = $record->bobot_unsur_kaligrafi + $record->bobot_unsur_seni_rupa + $record->bobot_sentuhan_akhir + $record->bobot_total;
-                        $record->save();
-                    })
-                    ->modalHeading('Input Nilai')
-                    ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
-                    ->hidden(fn ($record): bool => $record->total != 0 && $record->total != null &&
-                        $record->unsur_kaligrafi != 0 && $record->unsur_kaligrafi != null &&
-                        $record->unsur_seni_rupa != 0 && $record->unsur_seni_rupa != null &&
-                        $record->sentuhan_akhir != 0 && $record->sentuhan_akhir != null
-                    ),
-                Tables\Actions\ViewAction::make()
-                    ->label('')
-                    ->tooltip('Lihat Nilai')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->hidden(fn ($record): bool => $record->total == 0 || $record->total == null ||
-                        $record->unsur_kaligrafi == 0 || $record->unsur_kaligrafi == null ||
-                        $record->unsur_seni_rupa == 0 || $record->unsur_seni_rupa == null ||
-                        $record->sentuhan_akhir == 0 || $record->sentuhan_akhir == null),
                 ...HasLiveScoreActions::getLiveScoreTableActions('kontemporer'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('kontemporer'))

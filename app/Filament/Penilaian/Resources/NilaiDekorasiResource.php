@@ -163,49 +163,11 @@ class NilaiDekorasiResource extends Resource
                         }
                     }),
             ])
-            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
+            ->heading(HasLiveScoreActions::getCabangStatsHeader(static::$model))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('dekorasi'),
-                // ExportAction::make()
-                //     ->label(__('Download Excel'))
-                //     ->color('success')
-                //     ->exports([
-                //         ExcelExport::make()->fromTable()->except([
-                //             'index',
-                //         ]),
-                //     ])
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('')
-                    ->tooltip('Input Nilai')
-                    ->icon('heroicon-o-plus')
-                    ->color('success')
-                    ->successNotificationTitle('Nilai berhasil disimpan')
-                    ->after(function ($data, $record) {
-                        $record->bobot_total = $record->total * 100000000;
-                        $record->bobot_kebenaran_kaidah_khath = $record->kebenaran_kaidah_khath * 1000000;
-                        $record->bobot_keindahan_khath = $record->keindahan_khath * 10000;
-                        $record->bobot_keindahan_hiasan_dan_lukisan = $record->keindahan_hiasan_dan_lukisan * 100;
-                        $record->final_bobot = $record->bobot_kebenaran_kaidah_khath + $record->bobot_keindahan_khath + $record->bobot_keindahan_hiasan_dan_lukisan + $record->bobot_total;
-                        $record->save();
-                    })
-                    ->modalHeading('Input Nilai')
-                    ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
-                    ->hidden(fn ($record): bool => $record->total != 0 && $record->total != null &&
-                        $record->kebenaran_kaidah_khath != 0 && $record->kebenaran_kaidah_khath != null &&
-                        $record->keindahan_khath != 0 && $record->keindahan_khath != null &&
-                        $record->keindahan_hiasan_dan_lukisan != 0 && $record->keindahan_hiasan_dan_lukisan != null
-                    ),
-                Tables\Actions\ViewAction::make()
-                    ->label('')
-                    ->tooltip('Lihat Nilai')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->hidden(fn ($record): bool => $record->total == 0 || $record->total == null ||
-                        $record->kebenaran_kaidah_khath == 0 || $record->kebenaran_kaidah_khath == null ||
-                        $record->keindahan_khath == 0 || $record->keindahan_khath == null ||
-                        $record->keindahan_hiasan_dan_lukisan == 0 || $record->keindahan_hiasan_dan_lukisan == null),
                 ...HasLiveScoreActions::getLiveScoreTableActions('dekorasi'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('dekorasi'))

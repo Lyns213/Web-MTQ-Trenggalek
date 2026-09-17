@@ -274,17 +274,9 @@ class NilaiSatuJuzResource extends Resource
                         }
                     }),
             ])
-            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
+            ->heading(HasLiveScoreActions::getCabangStatsHeader(static::$model))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('satujuz'),
-                // ExportAction::make()
-                //     ->label(__('Download Excel'))
-                //     ->color('success')
-                //     ->exports([
-                //         ExcelExport::make()->fromTable()->except([
-                //             'index',
-                //         ]),
-                //     ])
                 Action::make('viewNilaiSatuJuz')
                     ->label('Penilaian MHQ 1 Juz dan Tilawah')
                     ->url(route('nilai-satujuz.index'))
@@ -292,46 +284,6 @@ class NilaiSatuJuzResource extends Resource
                     ->openUrlInNewTab(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('')
-                    ->tooltip('Input Nilai')
-                    ->icon('heroicon-o-plus')
-                    ->color('success')
-                    ->successNotificationTitle('Nilai berhasil disimpan')
-                    ->after(function ($data, $record) {
-                        $record->total = $record->total_tilawah + $record->total_tahfizh;
-                        $record->bobot_total = $record->total * 100000000;
-                        $record->bobot_total_tahfizh = $record->total_tahfizh * 1000000;
-                        $record->bobot_til_tajwid = $record->til_tajwid * 10000;
-                        $record->bobot_tah_tahfizh = $record->tah_tahfizh * 100;
-                        $record->final_bobot = $record->bobot_total + $record->bobot_til_tajwid + $record->bobot_tah_tahfizh + $record->bobot_total_tahfizh;
-                        $record->save();
-                    })
-                    ->modalHeading('Input Nilai')
-                    ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
-                    ->hidden(fn ($record): bool => $record->total_tilawah != 0 && $record->total_tilawah != null &&
-                        $record->til_tajwid != 0 && $record->til_tajwid != null &&
-                        $record->til_lagu != 0 && $record->til_lagu != null &&
-                        $record->til_suara != 0 && $record->til_suara != null &&
-                        $record->til_fashahah != 0 && $record->til_fashahah != null &&
-                        $record->tah_tahfizh != 0 && $record->tah_tahfizh != null &&
-                        $record->tah_tajwid != 0 && $record->tah_tajwid != null &&
-                        $record->tah_fashahah != 0 && $record->tah_fashahah != null
-                    ),
-                Tables\Actions\ViewAction::make()
-                    ->label('')
-                    ->tooltip('Lihat Nilai')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->hidden(fn ($record): bool => $record->total_tilawah == 0 || $record->total_tilawah == null ||
-                        $record->til_tajwid == 0 || $record->til_tajwid == null ||
-                        $record->til_lagu == 0 || $record->til_lagu == null ||
-                        $record->til_suara == 0 || $record->til_suara == null ||
-                        $record->til_fashahah == 0 && $record->til_fashahah == null ||
-                        $record->tah_tahfizh == 0 || $record->tah_tahfizh == null ||
-                        $record->tah_tajwid == 0 || $record->tah_tajwid == null ||
-                        $record->tah_fashahah == 0 || $record->tah_fashahah == null
-                    ),
                 ...HasLiveScoreActions::getLiveScoreTableActions('satujuz'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('satujuz'))

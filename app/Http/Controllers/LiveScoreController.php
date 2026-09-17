@@ -591,18 +591,22 @@ class LiveScoreController extends Controller
             return response()->json(['error' => 'No ID provided'], 400);
         }
 
-        $cfg = self::$config[$slug] ?? null;
-        if (!$cfg) {
+        $fields = \App\Filament\Penilaian\Concerns\HasLiveScoreActions::$cabangFields[$slug] ?? null;
+        if (!$fields) {
             return response()->json(['error' => 'Invalid slug'], 400);
         }
 
-        $modelClass = $cfg['model'];
+        $cfg = self::$config[$slug] ?? null;
+        $modelClass = $cfg ? $cfg['model'] : null;
+        if (!$modelClass) {
+            return response()->json(['error' => 'Invalid model'], 400);
+        }
+
         $record = $modelClass::find($id);
         if (!$record) {
             return response()->json(['error' => 'Record not found'], 404);
         }
 
-        $fields = $cfg['fields'] ?? [];
         $total = 0;
         foreach ($fields as $field) {
             $key = $field['key'];
@@ -610,6 +614,12 @@ class LiveScoreController extends Controller
             $val = min($max, max(0, floatval($request->input($key, 0))));
             $record->{$key} = $val;
             $total += $val;
+        }
+
+        if (in_array($slug, ['satujuz', 'limajuz'])) {
+            $record->total_tilawah = floatval($record->til_tajwid ?? 0) + floatval($record->til_lagu ?? 0) + floatval($record->til_suara ?? 0) + floatval($record->til_fashahah ?? 0);
+            $record->total_tahfizh = floatval($record->tah_tahfizh ?? 0) + floatval($record->tah_tajwid ?? 0) + floatval($record->tah_fashahah ?? 0);
+            $total = $record->total_tilawah + $record->total_tahfizh;
         }
 
         $record->total = $total;
@@ -626,12 +636,60 @@ class LiveScoreController extends Controller
             $record->bobot_lagu = ($record->lagu ?? 0) * 10000;
             $record->bobot_fashahah = ($record->fashahah ?? 0) * 100;
             $record->final_bobot = $record->bobot_tajwid + $record->bobot_lagu + $record->bobot_fashahah + $record->bobot_total;
+        } elseif (in_array($slug, ['sepuluhjuz', 'duapuluhjuz', 'tigapuluhjuz'])) {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_tahfizh = ($record->tahfizh ?? 0) * 1000000;
+            $record->bobot_tajwid = ($record->tajwid ?? 0) * 10000;
+            $record->bobot_fashahah = ($record->fashahah ?? 0) * 100;
+            $record->final_bobot = $record->bobot_tahfizh + $record->bobot_tajwid + $record->bobot_fashahah + $record->bobot_total;
+        } elseif (in_array($slug, ['satujuz', 'limajuz'])) {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_total_tahfizh = ($record->total_tahfizh ?? 0) * 1000000;
+            $record->bobot_til_tajwid = ($record->til_tajwid ?? 0) * 10000;
+            $record->bobot_tah_tahfizh = ($record->tah_tahfizh ?? 0) * 100;
+            $record->final_bobot = $record->bobot_total + $record->bobot_til_tajwid + $record->bobot_tah_tahfizh + $record->bobot_total_tahfizh;
+        } elseif ($slug === 'mushaf') {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_kebenaran_kaidah_khat = ($record->kebenaran_kaidah_khat ?? 0) * 1000000;
+            $record->bobot_keindahan_khat = ($record->keindahan_khat ?? 0) * 10000;
+            $record->bobot_keindahan_hiasan_dan_lukisan = ($record->keindahan_hiasan_dan_lukisan ?? 0) * 100;
+            $record->final_bobot = $record->bobot_kebenaran_kaidah_khat + $record->bobot_keindahan_khat + $record->bobot_keindahan_hiasan_dan_lukisan + $record->bobot_total;
+        } elseif ($slug === 'dekorasi') {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_kebenaran_kaidah_khath = ($record->kebenaran_kaidah_khath ?? 0) * 1000000;
+            $record->bobot_keindahan_khath = ($record->keindahan_khath ?? 0) * 10000;
+            $record->bobot_keindahan_hiasan_dan_lukisan = ($record->keindahan_hiasan_dan_lukisan ?? 0) * 100;
+            $record->final_bobot = $record->bobot_kebenaran_kaidah_khath + $record->bobot_keindahan_khath + $record->bobot_keindahan_hiasan_dan_lukisan + $record->bobot_total;
+        } elseif ($slug === 'kontemporer') {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_unsur_kaligrafi = ($record->unsur_kaligrafi ?? 0) * 1000000;
+            $record->bobot_unsur_seni_rupa = ($record->unsur_seni_rupa ?? 0) * 10000;
+            $record->bobot_sentuhan_akhir = ($record->sentuhan_akhir ?? 0) * 100;
+            $record->final_bobot = $record->bobot_unsur_kaligrafi + $record->bobot_unsur_seni_rupa + $record->bobot_sentuhan_akhir + $record->bobot_total;
+        } elseif ($slug === 'msq') {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_terjemahan_dan_materi = ($record->terjemahan_dan_materi ?? 0) * 1000000;
+            $record->bobot_penghayatan_dan_retorika = ($record->penghayatan_dan_retorika ?? 0) * 10000;
+            $record->bobot_tilawah = ($record->tilawah ?? 0) * 100;
+            $record->final_bobot = $record->bobot_terjemahan_dan_materi + $record->bobot_penghayatan_dan_retorika + $record->bobot_tilawah + $record->bobot_total;
+        } elseif ($slug === 'mmq') {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_bobot_materi = ($record->bobot_materi ?? 0) * 1000000;
+            $record->bobot_kaidah_dan_gaya_bahasa = ($record->kaidah_dan_gaya_bahasa ?? 0) * 10000;
+            $record->bobot_logika_dan_organisasi_pesan = ($record->logika_dan_organisasi_pesan ?? 0) * 100;
+            $record->final_bobot = $record->bobot_bobot_materi + $record->bobot_kaidah_dan_gaya_bahasa + $record->bobot_logika_dan_organisasi_pesan + $record->bobot_total;
+        } elseif ($slug === 'naskah') {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_kebenaran_kaidah_khat_wajib = ($record->kebenaran_kaidah_khat_wajib ?? 0) * 1000000;
+            $record->bobot_keindahan_khat_wajib = ($record->keindahan_khat_wajib ?? 0) * 10000;
+            $record->bobot_kebenaran_kaidah_khat_pilihan = ($record->kebenaran_kaidah_khat_pilihan ?? 0) * 100;
+            $record->final_bobot = $record->bobot_kebenaran_kaidah_khat_wajib + $record->bobot_keindahan_khat_wajib + $record->bobot_kebenaran_kaidah_khat_pilihan + $record->bobot_total;
         }
 
         $record->save();
 
         $selectedTahunId = session('selected_tahun_id', '0');
-        Cache::forget('stats_hdr_' . $slug . '_' . $selectedTahunId);
+        Cache::forget('stats_hdr_' . md5($modelClass . '_' . $selectedTahunId));
         Cache::forget('cabang_stats_' . md5($modelClass . '_' . $selectedTahunId));
 
         $fieldKeys = array_column($fields, 'key');

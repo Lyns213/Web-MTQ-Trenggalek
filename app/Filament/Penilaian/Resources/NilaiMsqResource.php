@@ -162,17 +162,9 @@ class NilaiMsqResource extends Resource
                         }
                     }),
             ])
-            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
+            ->heading(HasLiveScoreActions::getCabangStatsHeader(static::$model))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('msq'),
-                // ExportAction::make()
-                //     ->label(__('Download Excel'))
-                //     ->color('success')
-                //     ->exports([
-                //         ExcelExport::make()->fromTable()->except([
-                //             'index',
-                //         ]),
-                //     ])
                 Action::make('viewNilaiMsq')
                     ->label('Penilaian MSQ')
                     ->url(route('nilai-msq.index'))
@@ -180,36 +172,6 @@ class NilaiMsqResource extends Resource
                     ->openUrlInNewTab(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('')
-                    ->tooltip('Input Nilai')
-                    ->icon('heroicon-o-plus')
-                    ->color('success')
-                    ->successNotificationTitle('Nilai berhasil disimpan')
-                    ->after(function ($data, $record) {
-                        $record->bobot_total = $record->total * 100000000;
-                        $record->bobot_terjemahan_dan_materi = $record->terjemahan_dan_materi * 1000000;
-                        $record->bobot_penghayatan_dan_retorika = $record->penghayatan_dan_retorika * 10000;
-                        $record->bobot_tilawah = $record->tilawah * 100;
-                        $record->final_bobot = $record->bobot_terjemahan_dan_materi + $record->bobot_penghayatan_dan_retorika + $record->bobot_tilawah + $record->bobot_total;
-                        $record->save();
-                    })
-                    ->modalHeading('Input Nilai')
-                    ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
-                    ->hidden(fn ($record): bool => $record->total != 0 && $record->total != null &&
-                        $record->terjemahan_dan_materi != 0 && $record->terjemahan_dan_materi != null &&
-                        $record->penghayatan_dan_retorika != 0 && $record->penghayatan_dan_retorika != null &&
-                        $record->tilawah != 0 && $record->tilawah != null
-                    ),
-                Tables\Actions\ViewAction::make()
-                    ->label('')
-                    ->tooltip('Lihat Nilai')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->hidden(fn ($record): bool => $record->total == 0 || $record->total == null ||
-                        $record->terjemahan_dan_materi == 0 || $record->terjemahan_dan_materi == null ||
-                        $record->penghayatan_dan_retorika == 0 || $record->penghayatan_dan_retorika == null ||
-                        $record->tilawah == 0 || $record->tilawah == null),
                 ...HasLiveScoreActions::getLiveScoreTableActions('msq'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('msq'))

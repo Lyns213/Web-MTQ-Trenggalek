@@ -150,11 +150,7 @@ class NilaiTartilResource extends Resource
                         }
                     }),
             ])
-            ->heading(function () {
-                $tahunId = session('selected_tahun_id', '0');
-                $html = Cache::remember('stats_hdr_tartil_' . $tahunId, 120, fn () => view('filament.penilaian.components.tartil-stats-header')->render());
-                return new \Illuminate\Support\HtmlString($html);
-            })
+            ->heading(HasLiveScoreActions::getCabangStatsHeader(static::$model))
             ->headerActions([
                 Action::make('viewNilaiTartil')
                     ->label('Penilaian Tartil')
@@ -169,22 +165,6 @@ class NilaiTartilResource extends Resource
                     ->openUrlInNewTab(),
             ])
             ->actions([
-                Tables\Actions\Action::make('inputNilai')
-                    ->label('')
-                    ->tooltip(fn ($record) => ($record->total == 0 || $record->total == null) ? 'Input Nilai' : 'Lihat Nilai')
-                    ->icon(fn ($record) => ($record->total == 0 || $record->total == null) ? 'heroicon-o-plus' : 'heroicon-o-eye')
-                    ->color(fn ($record) => ($record->total == 0 || $record->total == null) ? 'success' : 'info')
-                    ->extraAttributes(fn ($record) => [
-                        'class' => 'btn-input-nilai',
-                        'data-record-id' => $record->id,
-                        'data-slug' => 'tartil',
-                        'data-nama' => $record->peserta?->nama ?? '',
-                        'data-tajwid' => floatval($record->tajwid ?? 0),
-                        'data-irama' => floatval($record->irama_dan_suara ?? 0),
-                        'data-fashahah' => floatval($record->fashahah ?? 0),
-                        'data-total' => floatval($record->total ?? 0),
-                    ])
-                    ->alpineClickHandler(fn ($record) => "window.mtqOpenInputNilai('tartil', {$record->id}, " . json_encode($record->peserta?->nama ?? '') . ", " . floatval($record->tajwid ?? 0) . ", " . floatval($record->irama_dan_suara ?? 0) . ", " . floatval($record->fashahah ?? 0) . ", " . floatval($record->total ?? 0) . ")"),
                 ...HasLiveScoreActions::getLiveScoreTableActions('tartil'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('tartil'))

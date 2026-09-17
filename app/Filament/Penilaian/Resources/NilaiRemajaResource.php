@@ -190,17 +190,9 @@ class NilaiRemajaResource extends Resource
                         }
                     }),
             ])
-            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
+            ->heading(HasLiveScoreActions::getCabangStatsHeader(static::$model))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('remaja'),
-                // ExportAction::make()
-                //     ->label(__('Download Excel'))
-                //     ->color('success')
-                //     ->exports([
-                //         ExcelExport::make()->fromTable()->except([
-                //             'index',
-                //         ]),
-                //     ])
                 Action::make('viewNilaiRemaja')
                     ->label('Penilaian Tilawah Remaja')
                     ->url(route('nilai-remaja.index'))
@@ -208,39 +200,6 @@ class NilaiRemajaResource extends Resource
                     ->openUrlInNewTab(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('')
-                    ->tooltip('Input Nilai')
-                    ->icon('heroicon-o-plus')
-                    ->color('success')
-                    ->successNotificationTitle('Nilai berhasil disimpan')
-                    ->after(function ($data, $record) {
-                        $record->bobot_total = $record->total * 100000000;
-                        $record->bobot_tajwid = $record->tajwid * 1000000;
-                        $record->bobot_lagu = $record->lagu * 10000;
-                        $record->bobot_fashahah = $record->fashahah * 100;
-                        $record->final_bobot = $record->bobot_tajwid + $record->bobot_lagu + $record->bobot_fashahah + $record->bobot_total;
-                        $record->save();
-                    })
-                    ->modalHeading('Input Nilai')
-                    ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
-                    ->hidden(fn ($record): bool => $record->total != 0 && $record->total != null &&
-                        $record->tajwid != 0 && $record->tajwid != null &&
-                        $record->lagu != 0 && $record->lagu != null &&
-                        $record->fashahah != 0 && $record->fashahah != null &&
-                        $record->suara != 0 && $record->suara != null
-                    ),
-                Tables\Actions\ViewAction::make()
-                    ->label('')
-                    ->tooltip('Lihat Nilai')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->hidden(fn ($record): bool => $record->total == 0 || $record->total == null ||
-                        $record->tajwid == 0 || $record->tajwid == null ||
-                        $record->lagu == 0 || $record->lagu == null ||
-                        $record->fashahah == 0 || $record->fashahah == null ||
-                        $record->suara == 0 || $record->suara == null
-                    ),
                 ...HasLiveScoreActions::getLiveScoreTableActions('remaja'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('remaja'))

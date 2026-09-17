@@ -189,54 +189,11 @@ class NilaiNaskahResource extends Resource
                         }
                     }),
             ])
-            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
+            ->heading(HasLiveScoreActions::getCabangStatsHeader(static::$model))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('naskah'),
-                // ExportAction::make()
-                //     ->label(__('Download Excel'))
-                //     ->color('success')
-                //     ->exports([
-                //         ExcelExport::make()->fromTable()->except([
-                //             'index',
-                //         ]),
-                //     ])
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('')
-                    ->tooltip('Input Nilai')
-                    ->icon('heroicon-o-plus')
-                    ->color('success')
-                    ->successNotificationTitle('Nilai berhasil disimpan')
-                    ->after(function ($data, $record) {
-                        $record->bobot_total = $record->total * 100000000;
-                        $record->bobot_kebenaran_kaidah_khat_wajib = $record->kebenaran_kaidah_khat_wajib * 1000000;
-                        $record->bobot_keindahan_khat_wajib = $record->keindahan_khat_wajib * 10000;
-                        $record->bobot_kebenaran_kaidah_khat_pilihan = $record->kebenaran_kaidah_khat_pilihan * 100;
-                        $record->final_bobot = $record->bobot_kebenaran_kaidah_khat_wajib + $record->bobot_keindahan_khat_wajib + $record->bobot_kebenaran_kaidah_khat_pilihan + $record->bobot_total;
-                        $record->save();
-                    })
-                    ->modalHeading('Input Nilai')
-                    ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
-                    ->hidden(
-                        fn($record): bool => $record->total != 0 && $record->total != null &&
-                            $record->kebenaran_kaidah_khat_wajib != 0 && $record->kebenaran_kaidah_khat_wajib != null &&
-                            $record->keindahan_khat_wajib != 0 && $record->keindahan_khat_wajib != null &&
-                            $record->kebenaran_kaidah_khat_pilihan != 0 && $record->kebenaran_kaidah_khat_pilihan != null &&
-                            $record->keindahan_khat_pilihan != 0 && $record->keindahan_khat_pilihan != null
-                    ),
-                Tables\Actions\ViewAction::make()
-                    ->label('')
-                    ->tooltip('Lihat Nilai')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->hidden(
-                        fn($record): bool => $record->total == 0 || $record->total == null ||
-                            $record->kebenaran_kaidah_khat_wajib == 0 || $record->kebenaran_kaidah_khat_wajib == null ||
-                            $record->keindahan_khat_wajib == 0 || $record->keindahan_khat_wajib == null ||
-                            $record->kebenaran_kaidah_khat_pilihan == 0 || $record->kebenaran_kaidah_khat_pilihan == null ||
-                            $record->keindahan_khat_pilihan == 0 || $record->keindahan_khat_pilihan == null
-                    ),
                 ...HasLiveScoreActions::getLiveScoreTableActions('naskah'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('naskah'))

@@ -190,17 +190,9 @@ class NilaiMmqResource extends Resource
                         }
                     }),
             ])
-            ->heading(fn () => new \Illuminate\Support\HtmlString(view('filament.penilaian.components.cabang-stats-header', ['modelClass' => static::$model])->render()))
+            ->heading(HasLiveScoreActions::getCabangStatsHeader(static::$model))
             ->headerActions([
                 HasLiveScoreActions::getLiveScoreHeaderAction('mmq'),
-                // ExportAction::make()
-                //     ->label(__('Download Excel'))
-                //     ->color('success')
-                //     ->exports([
-                //         ExcelExport::make()->fromTable()->except([
-                //             'index',
-                //         ]),
-                //     ])
                 Action::make('viewNilaiMmq')
                     ->label('Penilaian MMQ')
                     ->url(route('nilai-mmq.index'))
@@ -208,41 +200,6 @@ class NilaiMmqResource extends Resource
                     ->openUrlInNewTab(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->label('')
-                    ->tooltip('Input Nilai')
-                    ->icon('heroicon-o-plus')
-                    ->color('success')
-                    ->successNotificationTitle('Nilai berhasil disimpan')
-                    ->after(function ($data, $record) {
-                        $record->bobot_total = $record->total * 100000000;
-                        $record->bobot_bobot_materi = $record->bobot_materi * 1000000;
-                        $record->bobot_kaidah_dan_gaya_bahasa = $record->kaidah_dan_gaya_bahasa * 10000;
-                        $record->bobot_logika_dan_organisasi_pesan = $record->logika_dan_organisasi_pesan * 100;
-                        $record->final_bobot = $record->bobot_bobot_materi + $record->bobot_kaidah_dan_gaya_bahasa + $record->bobot_logika_dan_organisasi_pesan + $record->bobot_total;
-                        $record->save();
-                    })
-                    ->modalHeading('Input Nilai')
-                    ->modalDescription('Pastikan input nilai sudah sesuai, karena tidak bisa diubah')
-                    ->hidden(
-                        fn($record): bool => $record->total != 0 && $record->total != null &&
-                            $record->bobot_materi != 0 && $record->bobot_materi != null &&
-                            $record->kaidah_dan_gaya_bahasa != 0 && $record->kaidah_dan_gaya_bahasa != null &&
-                            $record->logika_dan_organisasi_pesan != 0 && $record->logika_dan_organisasi_pesan != null &&
-                            $record->presentasi != 0 && $record->presentasi != null
-                    ),
-                Tables\Actions\ViewAction::make()
-                    ->label('')
-                    ->tooltip('Lihat Nilai')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->hidden(
-                        fn($record): bool => $record->total == 0 || $record->total == null ||
-                            $record->bobot_materi == 0 || $record->bobot_materi == null ||
-                            $record->kaidah_dan_gaya_bahasa == 0 || $record->kaidah_dan_gaya_bahasa == null ||
-                            $record->logika_dan_organisasi_pesan == 0 || $record->logika_dan_organisasi_pesan == null ||
-                            $record->presentasi == 0 && $record->presentasi == null
-                    ),
                 ...HasLiveScoreActions::getLiveScoreTableActions('mmq'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('mmq'))

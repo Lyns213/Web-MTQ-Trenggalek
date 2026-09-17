@@ -265,16 +265,106 @@
     };
 
     // =========================================================================
-    // 5. ULTRA-FAST INSTANT INPUT NILAI MODAL (0ms OPEN, 0ms BATAL, FAST SAVE)
+    // 5. ULTRA-FAST INSTANT INPUT NILAI MODAL FOR ALL CABANG (0ms OPEN, 0ms BATAL, FAST SAVE)
     // =========================================================================
+    var CABANG_FIELDS = {
+        tartil: [
+            { key: 'tajwid', label: 'Tajwid', max: 40 },
+            { key: 'irama_dan_suara', label: 'Irama dan suara', max: 30 },
+            { key: 'fashahah', label: 'Fashahah', max: 30 }
+        ],
+        anak: [
+            { key: 'tajwid', label: 'Tajwid', max: 30 },
+            { key: 'lagu', label: 'Lagu', max: 25 },
+            { key: 'fashahah', label: 'Fashahah', max: 25 },
+            { key: 'suara', label: 'Suara', max: 20 }
+        ],
+        remaja: [
+            { key: 'tajwid', label: 'Tajwid', max: 30 },
+            { key: 'lagu', label: 'Lagu', max: 25 },
+            { key: 'fashahah', label: 'Fashahah', max: 25 },
+            { key: 'suara', label: 'Suara', max: 20 }
+        ],
+        dewasa: [
+            { key: 'tajwid', label: 'Tajwid', max: 30 },
+            { key: 'lagu', label: 'Lagu', max: 25 },
+            { key: 'fashahah', label: 'Fashahah', max: 25 },
+            { key: 'suara', label: 'Suara', max: 20 }
+        ],
+        satujuz: [
+            { key: 'til_tajwid', label: 'Tilawah - Tajwid', max: 30 },
+            { key: 'til_lagu', label: 'Tilawah - Lagu', max: 25 },
+            { key: 'til_suara', label: 'Tilawah - Suara', max: 15 },
+            { key: 'til_fashahah', label: 'Tilawah - Fashahah', max: 30 },
+            { key: 'tah_tahfizh', label: 'Tahfizh - Tahfizh', max: 50 },
+            { key: 'tah_tajwid', label: 'Tahfizh - Tajwid', max: 25 },
+            { key: 'tah_fashahah', label: 'Tahfizh - Fashahah', max: 25 }
+        ],
+        limajuz: [
+            { key: 'til_tajwid', label: 'Tilawah - Tajwid', max: 30 },
+            { key: 'til_lagu', label: 'Tilawah - Lagu', max: 25 },
+            { key: 'til_suara', label: 'Tilawah - Suara', max: 15 },
+            { key: 'til_fashahah', label: 'Tilawah - Fashahah', max: 30 },
+            { key: 'tah_tahfizh', label: 'Tahfizh - Tahfizh', max: 50 },
+            { key: 'tah_tajwid', label: 'Tahfizh - Tajwid', max: 25 },
+            { key: 'tah_fashahah', label: 'Tahfizh - Fashahah', max: 25 }
+        ],
+        sepuluhjuz: [
+            { key: 'tahfizh', label: 'Tahfizh', max: 50 },
+            { key: 'tajwid', label: 'Tajwid', max: 25 },
+            { key: 'fashahah', label: 'Fashahah', max: 25 }
+        ],
+        duapuluhjuz: [
+            { key: 'tahfizh', label: 'Tahfizh', max: 50 },
+            { key: 'tajwid', label: 'Tajwid', max: 25 },
+            { key: 'fashahah', label: 'Fashahah', max: 25 }
+        ],
+        tigapuluhjuz: [
+            { key: 'tahfizh', label: 'Tahfizh', max: 50 },
+            { key: 'tajwid', label: 'Tajwid', max: 25 },
+            { key: 'fashahah', label: 'Fashahah', max: 25 }
+        ],
+        mfq: [
+            { key: 'total', label: 'Total Nilai', max: 100 }
+        ],
+        msq: [
+            { key: 'terjemahan_dan_materi', label: 'Terjemah & Materi', max: 40 },
+            { key: 'penghayatan_dan_retorika', label: 'Penghayatan & Retorika', max: 30 },
+            { key: 'tilawah', label: 'Tilawah', max: 30 }
+        ],
+        mmq: [
+            { key: 'bobot_materi', label: 'Bobot Materi', max: 40 },
+            { key: 'kaidah_dan_gaya_bahasa', label: 'Kaidah & Gaya Bahasa', max: 25 },
+            { key: 'logika_dan_organisasi_pesan', label: 'Logika & Organisasi', max: 20 },
+            { key: 'presentasi', label: 'Presentasi', max: 15 }
+        ],
+        naskah: [
+            { key: 'kebenaran_kaidah_khat_wajib', label: 'Kaidah Khat Wajib', max: 35 },
+            { key: 'keindahan_khat_wajib', label: 'Keindahan Khat Wajib', max: 25 },
+            { key: 'kebenaran_kaidah_khat_pilihan', label: 'Kaidah Khat Pilihan', max: 25 },
+            { key: 'keindahan_khat_pilihan', label: 'Keindahan Khat Pilihan', max: 15 }
+        ],
+        mushaf: [
+            { key: 'kebenaran_kaidah_khat', label: 'Kebenaran Kaidah Khat', max: 45 },
+            { key: 'keindahan_khat', label: 'Keindahan Khat', max: 35 },
+            { key: 'keindahan_hiasan_dan_lukisan', label: 'Keindahan Hiasan & Lukisan', max: 20 }
+        ],
+        dekorasi: [
+            { key: 'kebenaran_kaidah_khath', label: 'Kebenaran Kaidah Khat', max: 45 },
+            { key: 'keindahan_khath', label: 'Keindahan Khat', max: 35 },
+            { key: 'keindahan_hiasan_dan_lukisan', label: 'Keindahan Hiasan & Lukisan', max: 20 }
+        ],
+        kontemporer: [
+            { key: 'unsur_kaligrafi', label: 'Unsur Kaligrafi', max: 40 },
+            { key: 'unsur_seni_rupa', label: 'Unsur Seni Rupa', max: 35 },
+            { key: 'sentuhan_akhir', label: 'Sentuhan Akhir', max: 25 }
+        ]
+    };
+
     var currentEditRecord = {
         slug: 'tartil',
         id: null,
-        nama: '',
-        tajwid: 0,
-        irama: 0,
-        fashahah: 0,
-        total: 0
+        nama: ''
     };
 
     function buildModalHtml() {
@@ -285,7 +375,7 @@
         modal.style.cssText = 'display: none; position: fixed; inset: 0; z-index: 99999; align-items: center; justify-content: center; padding: 16px; font-family: inherit;';
         modal.innerHTML = [
             '<div id="mtq-modal-backdrop" style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(4px);"></div>',
-            '<div style="position: relative; z-index: 10; width: 100%; max-width: 480px; background: #ffffff; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; border: 1px solid #e2e8f0;">',
+            '<div style="position: relative; z-index: 10; width: 100%; max-width: 500px; background: #ffffff; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; border: 1px solid #e2e8f0;">',
                 '<!-- Header -->',
                 '<div style="display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9;">',
                     '<div>',
@@ -297,32 +387,19 @@
                     '</button>',
                 '</div>',
                 '<!-- Body -->',
-                '<form id="mtq-score-form" onsubmit="window.mtqSubmitInputNilai(event)" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">',
+                '<form id="mtq-score-form" onsubmit="window.mtqSubmitInputNilai(event)" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;">',
                     '<div>',
                         '<label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">Nama</label>',
                         '<input type="text" id="mtq-field-nama" readonly style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; font-size: 13.5px; font-weight: 600; color: #64748b; outline: none;" />',
                     '</div>',
-                    '<div>',
-                        '<label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">Tajwid</label>',
-                        '<input type="number" step="0.01" min="0" max="40" id="mtq-field-tajwid" oninput="window.mtqRecalcScore()" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600; color: #0f172a; outline: none; transition: border-color 0.15s;" />',
-                        '<div style="font-size: 11.5px; color: #64748b; margin-top: 4px;"><strong>Petunjuk :</strong> Input nilai maksimal 40</div>',
-                    '</div>',
-                    '<div>',
-                        '<label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">Irama dan suara</label>',
-                        '<input type="number" step="0.01" min="0" max="30" id="mtq-field-irama" oninput="window.mtqRecalcScore()" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600; color: #0f172a; outline: none; transition: border-color 0.15s;" />',
-                        '<div style="font-size: 11.5px; color: #64748b; margin-top: 4px;"><strong>Petunjuk :</strong> Input nilai maksimal 30</div>',
-                    '</div>',
-                    '<div>',
-                        '<label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">Fashahah</label>',
-                        '<input type="number" step="0.01" min="0" max="30" id="mtq-field-fashahah" oninput="window.mtqRecalcScore()" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600; color: #0f172a; outline: none; transition: border-color 0.15s;" />',
-                        '<div style="font-size: 11.5px; color: #64748b; margin-top: 4px;"><strong>Petunjuk :</strong> Input nilai maksimal 30</div>',
-                    '</div>',
-                    '<div>',
+                    '<!-- Dynamic Fields Container -->',
+                    '<div id="mtq-modal-fields-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 48vh; overflow-y: auto; padding-right: 4px;"></div>',
+                    '<div id="mtq-modal-total-wrapper">',
                         '<label style="display: block; font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Total</label>',
                         '<input type="text" id="mtq-field-total" readonly style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 2px solid #10b981; border-radius: 8px; background: #ecfdf5; font-size: 18px; font-weight: 800; color: #065f46; text-align: center; outline: none;" value="0.00" />',
                     '</div>',
                     '<!-- Footer Buttons -->',
-                    '<div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">',
+                    '<div style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">',
                         '<button type="submit" id="mtq-btn-save-score" style="padding: 9px 24px; background: #10b981; color: #ffffff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);">',
                             '<span id="mtq-btn-save-spinner" style="display: none; width: 15px; height: 15px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; animation: mtqSpin 0.6s linear infinite;"></span>',
                             '<span>Simpan</span>',
@@ -337,41 +414,73 @@
 
         document.body.appendChild(modal);
 
-        // Click outside to dismiss
         var backdrop = document.getElementById('mtq-modal-backdrop');
         if (backdrop) {
             backdrop.onclick = function() { window.mtqCloseInputNilai(); };
         }
 
-        // Add spinner CSS animation
         var style = document.createElement('style');
         style.textContent = '@keyframes mtqSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
         document.head.appendChild(style);
     }
 
-    window.mtqOpenInputNilai = function(slug, recordId, nama, tajwid, irama, fashahah, total) {
+    window.mtqOpenInputNilai = function(slug, recordId, nama, scoresOrTajwid, irama, fashahah, totalVal) {
         buildModalHtml();
 
-        currentEditRecord.slug = slug || 'tartil';
+        slug = (slug || 'tartil').toLowerCase();
+        currentEditRecord.slug = slug;
         currentEditRecord.id = recordId;
         currentEditRecord.nama = nama || '';
-        currentEditRecord.tajwid = parseFloat(tajwid) || 0;
-        currentEditRecord.irama = parseFloat(irama) || 0;
-        currentEditRecord.fashahah = parseFloat(fashahah) || 0;
-        currentEditRecord.total = parseFloat(total) || 0;
+
+        var scores = {};
+        if (scoresOrTajwid && typeof scoresOrTajwid === 'object') {
+            scores = scoresOrTajwid;
+        } else {
+            scores = {
+                tajwid: parseFloat(scoresOrTajwid) || 0,
+                irama_dan_suara: parseFloat(irama) || 0,
+                fashahah: parseFloat(fashahah) || 0,
+                total: parseFloat(totalVal) || 0
+            };
+        }
 
         document.getElementById('mtq-field-nama').value = currentEditRecord.nama;
-        document.getElementById('mtq-field-tajwid').value = currentEditRecord.tajwid || '';
-        document.getElementById('mtq-field-irama').value = currentEditRecord.irama || '';
-        document.getElementById('mtq-field-fashahah').value = currentEditRecord.fashahah || '';
-        document.getElementById('mtq-field-total').value = (currentEditRecord.total > 0) ? currentEditRecord.total.toFixed(2) : '0.00';
+
+        var fields = CABANG_FIELDS[slug] || [
+            { key: 'total', label: 'Total Nilai', max: 100 }
+        ];
+
+        var container = document.getElementById('mtq-modal-fields-container');
+        if (container) {
+            container.innerHTML = '';
+            fields.forEach(function(f) {
+                var val = scores[f.key] !== undefined && scores[f.key] !== null ? scores[f.key] : '';
+                if (val === 0 || val === '0') val = '';
+
+                var rowDiv = document.createElement('div');
+                rowDiv.innerHTML = [
+                    '<label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 5px;">' + f.label + '</label>',
+                    '<input type="number" step="0.01" min="0" max="' + f.max + '" data-key="' + f.key + '" data-max="' + f.max + '" class="mtq-dynamic-field" oninput="window.mtqRecalcScore()" value="' + val + '" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600; color: #0f172a; outline: none; transition: border-color 0.15s;" />',
+                    '<div style="font-size: 11.5px; color: #64748b; margin-top: 3px;"><strong>Petunjuk :</strong> Input nilai maksimal ' + f.max + '</div>'
+                ].join('');
+                container.appendChild(rowDiv);
+            });
+        }
+
+        var totalWrapper = document.getElementById('mtq-modal-total-wrapper');
+        if (totalWrapper) {
+            totalWrapper.style.display = (slug === 'mfq') ? 'none' : 'block';
+        }
+
+        var currentTotal = parseFloat(scores.total) || 0;
+        document.getElementById('mtq-field-total').value = (currentTotal > 0) ? currentTotal.toFixed(2) : '0.00';
 
         var modal = document.getElementById('mtq-instant-score-modal');
         if (modal) {
             modal.style.display = 'flex';
             setTimeout(function() {
-                var f = document.getElementById('mtq-field-tajwid');
-                if (f) f.focus();
+                var firstInput = container ? container.querySelector('input') : null;
+                if (firstInput) firstInput.focus();
             }, 50);
         }
     };
@@ -384,20 +493,19 @@
     };
 
     window.mtqRecalcScore = function() {
-        var tEl = document.getElementById('mtq-field-tajwid');
-        var iEl = document.getElementById('mtq-field-irama');
-        var fEl = document.getElementById('mtq-field-fashahah');
+        var fields = document.querySelectorAll('.mtq-dynamic-field');
+        var total = 0;
+        fields.forEach(function(inp) {
+            var max = parseFloat(inp.getAttribute('data-max')) || 100;
+            var val = parseFloat(inp.value) || 0;
+            if (val > max) {
+                val = max;
+                inp.value = max;
+            }
+            total += val;
+        });
+
         var totEl = document.getElementById('mtq-field-total');
-
-        var t = parseFloat(tEl ? tEl.value : 0) || 0;
-        var i = parseFloat(iEl ? iEl.value : 0) || 0;
-        var f = parseFloat(fEl ? fEl.value : 0) || 0;
-
-        if (t > 40) { t = 40; if (tEl) tEl.value = 40; }
-        if (i > 30) { i = 30; if (iEl) iEl.value = 30; }
-        if (f > 30) { f = 30; if (fEl) fEl.value = 30; }
-
-        var total = t + i + f;
         if (totEl) {
             totEl.value = total.toFixed(2);
         }
@@ -406,11 +514,6 @@
     window.mtqSubmitInputNilai = function(e) {
         if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
-        var t = parseFloat(document.getElementById('mtq-field-tajwid')?.value) || 0;
-        var i = parseFloat(document.getElementById('mtq-field-irama')?.value) || 0;
-        var f = parseFloat(document.getElementById('mtq-field-fashahah')?.value) || 0;
-        var total = t + i + f;
-
         var btn = document.getElementById('mtq-btn-save-score');
         var spinner = document.getElementById('mtq-btn-save-spinner');
         if (btn) btn.disabled = true;
@@ -418,9 +521,15 @@
 
         var payload = new URLSearchParams();
         payload.append('id', currentEditRecord.id);
-        payload.append('tajwid', t);
-        payload.append('irama_dan_suara', i);
-        payload.append('fashahah', f);
+
+        var fields = document.querySelectorAll('.mtq-dynamic-field');
+        var total = 0;
+        fields.forEach(function(inp) {
+            var key = inp.getAttribute('data-key');
+            var val = parseFloat(inp.value) || 0;
+            payload.append(key, val);
+            total += val;
+        });
 
         fetch(APP_BASE + '/simpan-nilai/' + currentEditRecord.slug, {
             method: 'POST',
@@ -442,13 +551,17 @@
             // Update row in table DOM directly
             var row = document.querySelector('tr.timer-active-row') || document.querySelector('[data-record-id="' + currentEditRecord.id + '"]')?.closest('tr');
             if (row) {
-                var cells = row.querySelectorAll('td');
-                // Row format: [0: nama, 1: jk, 2: kec, 3: tajwid, 4: irama, 5: fashahah, 6: total, 7: timer, 8: actions]
-                if (cells.length >= 7) {
-                    updateCellText(cells[3], t);
-                    updateCellText(cells[4], i);
-                    updateCellText(cells[5], f);
-                    updateCellText(cells[6], total.toFixed(2));
+                var totalCell = row.querySelector('td:nth-last-child(3)') || row.querySelector('.fi-ta-col-total') || row.querySelector('td.fi-ta-cell:last-child');
+                // Also update any field cell matching
+                if (data.total !== undefined) {
+                    var cells = row.querySelectorAll('td');
+                    cells.forEach(function(cell) {
+                        var text = (cell.textContent || '').trim();
+                        // If cell looks like total or empty score
+                        if (cell.classList.contains('fi-ta-col-total')) {
+                            updateCellText(cell, Number(data.total).toFixed(2));
+                        }
+                    });
                 }
             }
         })
