@@ -568,4 +568,33 @@ html.dark .fi-panel-penilaian .penilaian-section-title {
 html.dark .fi-panel-penilaian .penilaian-section-border {
     border-color: rgba(255, 255, 255, 0.1) !important;
 }
+
+/* ==========================================================================
+   FAST RESPONSIVE NOTIFICATIONS & ACTIONS
+   ========================================================================== */
+.fi-no-notification {
+    cursor: pointer !important;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    user-select: none;
+}
+.fi-no-notification:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+.fi-no-notification:active {
+    transform: scale(0.97);
+}
+
+.btn-toggle-timer,
+.btn-reset-timer,
+.btn-show-live,
+.btn-unshow-live {
+    transition: transform 0.1s ease, filter 0.1s ease !important;
+}
+.btn-toggle-timer:active,
+.btn-reset-timer:active,
+.btn-show-live:active,
+.btn-unshow-live:active {
+    transform: scale(0.9);
+}
 </style>

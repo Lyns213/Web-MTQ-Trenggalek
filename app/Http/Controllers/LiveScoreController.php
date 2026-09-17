@@ -516,7 +516,16 @@ class LiveScoreController extends Controller
         $id = $request->input('id') ?: $liveActiveId;
         if (!$id) return response()->json(['error' => 'No ID'], 400);
 
+        if ($action === 'unshow') {
+            Cache::forget('mtq_live_active_' . $slug);
+            return new \Illuminate\Http\JsonResponse(['success' => true, 'unshow' => true]);
+        }
+
         Cache::put('mtq_live_active_' . $slug, (int)$id, 86400);
+
+        if ($action === 'show') {
+            return new \Illuminate\Http\JsonResponse(['success' => true, 'show' => true, 'active_id' => (int)$id]);
+        }
 
         $cfg = self::$config[$slug] ?? self::$config['tartil'];
         $cacheKey = 'mtq_timer_' . $slug . '_' . $id;

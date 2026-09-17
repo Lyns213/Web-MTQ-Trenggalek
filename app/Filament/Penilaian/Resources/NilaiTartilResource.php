@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+use App\Filament\Penilaian\Concerns\HasLiveScoreActions;
 use App\Filament\Penilaian\Resources\NilaiTartilResource\Pages;
 use App\Filament\Resources\NilaiTartilResource\RelationManagers;
 
@@ -122,61 +123,8 @@ class NilaiTartilResource extends Resource
                 TextColumn::make('irama_dan_suara'),
                 TextColumn::make('fashahah'),
                 TextColumn::make('total'),
-                TextColumn::make('timer_countdown')
-                    ->label('Timer')
-                    ->getStateUsing(function ($record) {
-                        if (Cache::get('mtq_live_active_tartil') != $record->id) {
-                            return '';
-                        }
-                        $cacheKey = 'mtq_timer_tartil_' . $record->id;
-                        $timerState = Cache::get($cacheKey);
-
-                        if (!$timerState) {
-                            return '';
-                        }
-
-                        $remaining = $timerState['remaining_seconds'];
-                        if ($timerState['is_running'] && $timerState['started_at']) {
-                            $elapsed = time() - $timerState['started_at'];
-                            $remaining = max(0, $remaining - $elapsed);
-                        }
-
-                        $hours = floor($remaining / 3600);
-                        $minutes = floor(($remaining % 3600) / 60);
-                        $seconds = $remaining % 60;
-
-                        return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
-                    })
-                    ->extraAttributes(function ($record) {
-                        if (Cache::get('mtq_live_active_tartil') != $record->id) {
-                            return [];
-                        }
-                        $cacheKey = 'mtq_timer_tartil_' . $record->id;
-                        $timerState = Cache::get($cacheKey);
-
-                        if (!$timerState) {
-                            return [];
-                        }
-
-                        $remaining = $timerState['remaining_seconds'];
-                        if ($timerState['is_running'] && $timerState['started_at']) {
-                            $elapsed = time() - $timerState['started_at'];
-                            $remaining = max(0, $remaining - $elapsed);
-                        }
-
-                        return [
-                            'data-remaining' => $remaining,
-                            'data-total-seconds' => $timerState['total_seconds'] ?? 300,
-                            'data-record-id' => $record->id,
-                            'data-is-running' => ($timerState['is_running'] ?? false) ? 1 : 0,
-                            'data-format' => 'hms',
-                            'data-slug' => 'tartil',
-                            'class' => 'timer-cell',
-                        ];
-                    })
-                    ->color('warning')
-                    ->weight('bold'),
-                        ])
+                HasLiveScoreActions::getTimerTableColumn('tartil'),
+            ])
             ->actions([
             ])
             ->paginated(false)
@@ -222,7 +170,6 @@ class NilaiTartilResource extends Resource
                     ->tooltip(fn ($record) => ($record->total == 0 || $record->total == null) ? 'Input Nilai' : 'Lihat Nilai')
                     ->icon(fn ($record) => ($record->total == 0 || $record->total == null) ? 'heroicon-o-plus' : 'heroicon-o-eye')
                     ->color(fn ($record) => ($record->total == 0 || $record->total == null) ? 'success' : 'info')
-                    ->visible(fn ($record) => Cache::get('mtq_live_active_tartil') == $record->id)
                     ->successNotificationTitle('Nilai berhasil disimpan')
                     ->using(function (NilaiTartil $record, array $data): NilaiTartil {
                         $tajwid = min(40, max(0, floatval($data['tajwid'] ?? 0)));
@@ -241,133 +188,13 @@ class NilaiTartilResource extends Resource
                         $record->final_bobot = $record->bobot_tajwid + $record->bobot_irama_dan_suara + $record->bobot_fashahah + $record->bobot_total;
                         $record->save();
 
-                        Notification::make()
-                            ->title('Nilai berhasil disimpan')
-                            ->success()
-                            ->send();
-
                         return $record;
                     })
                     ->modalHeading('Input Nilai')
                     ->modalDescription('Pastikan input nilai dengan tepat, karena kesempatan mengisi hanya sekali'),
-                Action::make('showLive')
-                    ->label('')
-                    ->tooltip('Tampilkan Peserta')
-                    ->icon('heroicon-o-tv')
-                    ->color('info')
-                    ->action(function ($record) {
-                        Cache::put('mtq_live_active_tartil', $record->id, 86400);
-                        \Filament\Notifications\Notification::make()
-                            ->title('Peserta ditampilkan di live score')
-                            ->success()
-                            ->send();
-                    })
-                    ->visible(fn ($record) => Cache::get('mtq_live_active_tartil') != $record->id),
-                Action::make('unshowLive')
-                    ->label('')
-                    ->tooltip('Sembunyikan Peserta')
-                    ->icon('heroicon-o-eye-slash')
-                    ->color('gray')
-                    ->action(function ($record) {
-                        Cache::forget('mtq_live_active_tartil');
-                        \Filament\Notifications\Notification::make()
-                            ->title('Peserta disembunyikan dari live score')
-                            ->success()
-                            ->send();
-                    })
-                    ->visible(fn ($record) => Cache::get('mtq_live_active_tartil') == $record->id),
-
-                Action::make('toggleTimer')
-                    ->label('')
-                    ->tooltip(fn ($record) => (Cache::get('mtq_timer_tartil_' . $record->id)['is_running'] ?? false) ? 'Jeda Waktu' : 'Mulai Waktu')
-                    ->icon(fn ($record) => (Cache::get('mtq_timer_tartil_' . $record->id)['is_running'] ?? false) ? 'heroicon-o-pause' : 'heroicon-o-play')
-                    ->color(fn ($record) => (Cache::get('mtq_timer_tartil_' . $record->id)['is_running'] ?? false) ? 'warning' : 'success')
-                    ->extraAttributes(fn ($record) => [
-                        'class' => 'btn-toggle-timer',
-                        'data-action-timer' => (Cache::get('mtq_timer_tartil_' . $record->id)['is_running'] ?? false) ? 'pause' : 'start',
-                        'data-record-id' => $record->id,
-                        'data-slug' => 'tartil',
-                    ])
-                    ->action(function ($record) {
-                        $cacheKey = 'mtq_timer_tartil_' . $record->id;
-                        $timerState = Cache::get($cacheKey);
-
-                        if (!$timerState) {
-                            $cabang = $record->peserta?->cabang;
-                            $timer = $cabang ? $cabang->timer : '00:05:00';
-                            $parts = explode(':', $timer);
-                            $totalSeconds = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
-
-                            $timerState = [
-                                'total_seconds' => $totalSeconds,
-                                'remaining_seconds' => $totalSeconds,
-                                'is_running' => false,
-                                'started_at' => null,
-                            ];
-                        }
-
-                        if ($timerState['is_running']) {
-                            if ($timerState['started_at']) {
-                                $elapsed = time() - $timerState['started_at'];
-                                $timerState['remaining_seconds'] = max(0, $timerState['remaining_seconds'] - $elapsed);
-                            }
-                            $timerState['is_running'] = false;
-                            $timerState['started_at'] = null;
-                            Notification::make()->title('Timer dijeda')->warning()->send();
-                        } else {
-                            if ($timerState['remaining_seconds'] <= 0) {
-                                $timerState['remaining_seconds'] = $timerState['total_seconds'];
-                            }
-                            if (!$timerState['is_running'] || empty($timerState['started_at'])) {
-                                $timerState['started_at'] = time();
-                            }
-                            $timerState['is_running'] = true;
-                            Cache::put('mtq_live_active_tartil', $record->id, 86400);
-                            Notification::make()->title('Timer dimulai')->success()->send();
-                        }
-
-                        Cache::put($cacheKey, $timerState, 86400);
-                    }),
-
-                Action::make('resetTimer')
-                    ->label('')
-                    ->tooltip('Reset Waktu')
-                ->icon('heroicon-o-arrow-path')
-                ->color('danger')
-                ->requiresConfirmation()
-                ->modalHeading('Reset Waktu')
-                ->modalDescription('Apakah Anda yakin ingin mereset waktu?')
-                ->modalSubmitActionLabel('Reset Waktu')
-                ->extraAttributes(fn ($record) => [
-                    'class' => 'btn-reset-timer',
-                    'data-record-id' => $record->id,
-                    'data-slug' => 'tartil',
-                ])
-                ->action(function ($record) {
-                    $cacheKey = 'mtq_timer_tartil_' . $record->id;
-                    $timerState = Cache::get($cacheKey);
-
-                    if (!$timerState) {
-                        $cabang = $record->peserta?->cabang;
-                        $timer = $cabang ? $cabang->timer : '00:05:00';
-                        $parts = explode(':', $timer);
-                        $totalSeconds = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
-                        $timerState = [
-                            'total_seconds' => $totalSeconds,
-                            'remaining_seconds' => $totalSeconds,
-                            'is_running' => false,
-                            'started_at' => null,
-                        ];
-                    }
-
-                    $timerState['is_running'] = false;
-                    $timerState['started_at'] = null;
-                    $timerState['remaining_seconds'] = $timerState['total_seconds'];
-                    Cache::put($cacheKey, $timerState, 86400);
-                    Notification::make()->title('Timer direset')->danger()->send();
-                }),
+                ...HasLiveScoreActions::getLiveScoreTableActions('tartil'),
             ])
-            ->recordClasses(fn ($record) => (Cache::get('mtq_timer_tartil_' . $record->id)['is_running'] ?? false) ? 'timer-active-row' : '')
+            ->recordClasses(HasLiveScoreActions::getRecordClasses('tartil'))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                 ]),

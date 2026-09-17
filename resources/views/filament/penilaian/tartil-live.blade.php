@@ -989,14 +989,12 @@ function handleDirectSync(ev) {
 
     if (ev.action === 'start') {
         lastLocalActionAt = Date.now();
-        if (!isTimerRunning) {
-            isTimerRunning = true;
-            timerSeconds = ev.remaining || totalTimerSeconds;
-            timerInitialAtStart = timerSeconds;
-            timerStartedAt = Date.now();
-            updateTimerDisplay(timerSeconds, true);
-            playBeeps(1, 'start');
-        }
+        isTimerRunning = true;
+        timerSeconds = ev.remaining || totalTimerSeconds;
+        timerInitialAtStart = timerSeconds;
+        timerStartedAt = Date.now();
+        updateTimerDisplay(timerSeconds, true);
+        playBeeps(1, 'start');
     } else if (ev.action === 'pause') {
         lastLocalActionAt = Date.now();
         isTimerRunning = false;
@@ -1011,6 +1009,8 @@ function handleDirectSync(ev) {
         playedMidSound = false;
         playedEndSound = false;
         updateTimerDisplay(totalTimerSeconds, false);
+    } else if (ev.action === 'score_saved') {
+        fetchData(currentId);
     }
 }
 
@@ -1044,7 +1044,6 @@ function pollFastTimerStatus() {
             if (tInfo.record_id && currentId && tInfo.record_id !== currentId) {
                 currentId = tInfo.record_id;
                 fetchData(currentId);
-                return;
             }
 
             if (tInfo.is_running) {
@@ -1133,8 +1132,7 @@ function highlightActiveLeaderboard(id) {
 }
 
 function getAppBasePath() {
-    var match = window.location.pathname.match(/^(.*?)\/live/i);
-    return (match && match[1]) ? match[1] : '';
+    return '{{ url('/') }}';
 }
 
 function resolveStorageUrl(url) {
@@ -1538,15 +1536,20 @@ function fetchData(forcedId, setActive) {
                 if (isNewParticipant || isPreview) {
                     // Peserta berganti (dari Dewan Hakim atau tombol Prev/Next)
                     currentId = Number(data.current.id);
-                    isTimerRunning = serverIsRunning;
-                    timerSeconds = serverRemaining;
-                    timerInitialAtStart = serverRemaining;
-                    timerStartedAt = Date.now();
-                    playedMidSound = (serverRemaining <= 60 && serverRemaining > 0);
-                    playedEndSound = (serverRemaining <= 0);
-                    updateTimerDisplay(timerSeconds, isTimerRunning);
-                    if (serverIsRunning && Math.abs(serverRemaining - totalTimerSeconds) <= 2) {
-                        playBeeps(1, 'start');
+                    var hasRecentAction = (Date.now() - lastLocalActionAt < 4000);
+                    if (!hasRecentAction || !isTimerRunning) {
+                        isTimerRunning = serverIsRunning;
+                        timerSeconds = serverRemaining;
+                        timerInitialAtStart = serverRemaining;
+                        timerStartedAt = Date.now();
+                        playedMidSound = (serverRemaining <= 60 && serverRemaining > 0);
+                        playedEndSound = (serverRemaining <= 0);
+                        updateTimerDisplay(timerSeconds, isTimerRunning);
+                        if (serverIsRunning && Math.abs(serverRemaining - totalTimerSeconds) <= 2) {
+                            playBeeps(1, 'start');
+                        }
+                    } else {
+                        updateTimerDisplay(timerSeconds, true);
                     }
                 } else {
                     if (serverIsRunning) {

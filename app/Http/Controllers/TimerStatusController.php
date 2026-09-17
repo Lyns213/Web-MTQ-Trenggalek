@@ -22,6 +22,12 @@ class TimerStatusController extends Controller
                     if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
                         $elapsed = time() - $timerState['started_at'];
                         $remaining = max(0, $remaining - $elapsed);
+                        if ($remaining <= 0) {
+                            $timerState['is_running'] = false;
+                            $timerState['remaining_seconds'] = 0;
+                            $timerState['started_at'] = null;
+                            Cache::put($cacheKey, $timerState, 86400);
+                        }
                     }
                     $timers[$slug] = [
                         'record_id' => (int)$activeId,

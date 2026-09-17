@@ -28,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::unguard();
+
+        \Filament\Notifications\Notification::configureUsing(function (\Filament\Notifications\Notification $notification): void {
+            $notification->duration(1800);
+        });
+
         if (App::environment(['staging', 'production'])) {
             URL::forceScheme('https');
         }

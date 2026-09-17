@@ -4,32 +4,46 @@
 
     $isGrup = ($modelClass === \App\Models\NilaiMfq::class);
 
-    if ($isGrup) {
-        $query = $modelClass::query()
-            ->join('grups', 'nilai_mfqs.grup_id', '=', 'grups.id');
-        if ($tahunId) {
-            $query->where('grups.tahun_id', $tahunId);
+    $statsCacheKey = 'cabang_stats_' . md5($modelClass . '_' . ($tahunId ?? '0'));
+    $stats = \Illuminate\Support\Facades\Cache::remember($statsCacheKey, 30, function () use ($modelClass, $tahunId, $isGrup) {
+        if ($isGrup) {
+            $query = $modelClass::query()
+                ->join('grups', 'nilai_mfqs.grup_id', '=', 'grups.id');
+            if ($tahunId) {
+                $query->where('grups.tahun_id', $tahunId);
+            }
+            return [
+                'total' => (clone $query)->count(),
+                'putra' => (clone $query)->where('grups.jenis_kelamin', 'like', '%putra%')->count(),
+                'putri' => (clone $query)->where('grups.jenis_kelamin', 'like', '%putri%')->count(),
+                'unitLabel' => 'Regu',
+                'putraLabel' => 'Regu Putra',
+                'putriLabel' => 'Regu Putri',
+            ];
+        } else {
+            $table = (new $modelClass)->getTable();
+            $query = $modelClass::query()
+                ->join('pesertas', "{$table}.peserta_id", '=', 'pesertas.id');
+            if ($tahunId) {
+                $query->where('pesertas.tahun_id', $tahunId);
+            }
+            return [
+                'total' => (clone $query)->count(),
+                'putra' => (clone $query)->where('pesertas.jenis_kelamin', 'like', '%putra%')->count(),
+                'putri' => (clone $query)->where('pesertas.jenis_kelamin', 'like', '%putri%')->count(),
+                'unitLabel' => 'Peserta',
+                'putraLabel' => 'Putra',
+                'putriLabel' => 'Putri',
+            ];
         }
-        $total = (clone $query)->count();
-        $putra = (clone $query)->where('grups.jenis_kelamin', 'like', '%putra%')->count();
-        $putri = (clone $query)->where('grups.jenis_kelamin', 'like', '%putri%')->count();
-        $unitLabel = 'Regu';
-        $putraLabel = 'Regu Putra';
-        $putriLabel = 'Regu Putri';
-    } else {
-        $table = (new $modelClass)->getTable();
-        $query = $modelClass::query()
-            ->join('pesertas', "{$table}.peserta_id", '=', 'pesertas.id');
-        if ($tahunId) {
-            $query->where('pesertas.tahun_id', $tahunId);
-        }
-        $total = (clone $query)->count();
-        $putra = (clone $query)->where('pesertas.jenis_kelamin', 'like', '%putra%')->count();
-        $putri = (clone $query)->where('pesertas.jenis_kelamin', 'like', '%putri%')->count();
-        $unitLabel = 'Peserta';
-        $putraLabel = 'Putra';
-        $putriLabel = 'Putri';
-    }
+    });
+
+    $total = $stats['total'];
+    $putra = $stats['putra'];
+    $putri = $stats['putri'];
+    $unitLabel = $stats['unitLabel'];
+    $putraLabel = $stats['putraLabel'];
+    $putriLabel = $stats['putriLabel'];
 @endphp
 
 <style>
