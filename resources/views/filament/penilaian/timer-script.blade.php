@@ -192,6 +192,10 @@
         if (isNaN(rem) || rem <= 0) rem = total;
 
         if (!isRunning) {
+            if (rem >= total - 2) {
+                playedMidMap[recordId] = false;
+                playedEndMap[recordId] = false;
+            }
             if (cell) {
                 cell.setAttribute('data-is-running', '1');
                 cell.setAttribute('data-remaining', rem);
@@ -219,6 +223,9 @@
         var row = btn ? btn.closest('tr') : null;
         var cell = row ? row.querySelector('.timer-cell') : document.querySelector('.timer-cell[data-record-id="' + recordId + '"]');
         var total = parseInt(btn.getAttribute('data-total-seconds') || (cell ? cell.getAttribute('data-total-seconds') : '300'), 10) || 300;
+
+        playedMidMap[recordId] = false;
+        playedEndMap[recordId] = false;
 
         if (cell) {
             cell.setAttribute('data-is-running', '0');
@@ -594,12 +601,12 @@
                 var format = cell.getAttribute('data-format') || 'ms';
                 updateCellText(cell, formatTime(rem, format));
 
-                if (rem === 60 && !playedMidMap[recordId]) {
+                if (rem <= 60 && rem > 0 && !playedMidMap[recordId]) {
                     playedMidMap[recordId] = true;
                     playBeeps(2, 'mid');
                 }
 
-                if (rem === 0) {
+                if (rem <= 0) {
                     cell.setAttribute('data-is-running', '0');
                     if (!playedEndMap[recordId]) {
                         playedEndMap[recordId] = true;
