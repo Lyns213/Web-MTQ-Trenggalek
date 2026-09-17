@@ -169,41 +169,22 @@ class NilaiTartilResource extends Resource
                     ->openUrlInNewTab(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                Tables\Actions\Action::make('inputNilai')
                     ->label('')
                     ->tooltip(fn ($record) => ($record->total == 0 || $record->total == null) ? 'Input Nilai' : 'Lihat Nilai')
                     ->icon(fn ($record) => ($record->total == 0 || $record->total == null) ? 'heroicon-o-plus' : 'heroicon-o-eye')
                     ->color(fn ($record) => ($record->total == 0 || $record->total == null) ? 'success' : 'info')
-                    ->visible(fn ($record) => HasLiveScoreActions::getActiveRecordId('tartil') == $record->id)
-                    ->modalWidth('md')
-                    ->extraAttributes([
+                    ->extraAttributes(fn ($record) => [
                         'class' => 'btn-input-nilai',
+                        'data-record-id' => $record->id,
+                        'data-slug' => 'tartil',
+                        'data-nama' => $record->peserta?->nama ?? '',
+                        'data-tajwid' => floatval($record->tajwid ?? 0),
+                        'data-irama' => floatval($record->irama_dan_suara ?? 0),
+                        'data-fashahah' => floatval($record->fashahah ?? 0),
+                        'data-total' => floatval($record->total ?? 0),
                     ])
-                    ->successNotificationTitle('Nilai berhasil disimpan')
-                    ->using(function (NilaiTartil $record, array $data): NilaiTartil {
-                        $tajwid = min(40, max(0, floatval($data['tajwid'] ?? 0)));
-                        $irama = min(30, max(0, floatval($data['irama_dan_suara'] ?? 0)));
-                        $fashahah = min(30, max(0, floatval($data['fashahah'] ?? 0)));
-                        $total = $tajwid + $irama + $fashahah;
-
-                        $record->tajwid = $tajwid;
-                        $record->irama_dan_suara = $irama;
-                        $record->fashahah = $fashahah;
-                        $record->total = $total;
-                        $record->bobot_total = $total * 100000000;
-                        $record->bobot_tajwid = $tajwid * 1000000;
-                        $record->bobot_irama_dan_suara = $irama * 10000;
-                        $record->bobot_fashahah = $fashahah * 100;
-                        $record->final_bobot = $record->bobot_tajwid + $record->bobot_irama_dan_suara + $record->bobot_fashahah + $record->bobot_total;
-                        $record->save();
-
-                        Cache::forget('stats_hdr_tartil_' . session('selected_tahun_id', '0'));
-                        Cache::forget('cabang_stats_' . md5(NilaiTartil::class . '_' . session('selected_tahun_id', '0')));
-
-                        return $record;
-                    })
-                    ->modalHeading('Input Nilai')
-                    ->modalDescription('Pastikan input nilai dengan tepat, karena kesempatan mengisi hanya sekali'),
+                    ->alpineClickHandler(fn ($record) => "window.mtqOpenInputNilai('tartil', {$record->id}, " . json_encode($record->peserta?->nama ?? '') . ", " . floatval($record->tajwid ?? 0) . ", " . floatval($record->irama_dan_suara ?? 0) . ", " . floatval($record->fashahah ?? 0) . ", " . floatval($record->total ?? 0) . ")"),
                 ...HasLiveScoreActions::getLiveScoreTableActions('tartil'),
             ])
             ->recordClasses(HasLiveScoreActions::getRecordClasses('tartil'))

@@ -151,16 +151,9 @@ class HasLiveScoreActions
                     'class' => 'btn-toggle-show-live',
                     'data-record-id' => $record->id,
                     'data-slug' => $slug,
+                    'data-is-active' => (static::getActiveRecordId($slug) == $record->id) ? '1' : '0',
                 ])
-                ->action(function ($record) use ($slug) {
-                    if (static::getActiveRecordId($slug) == $record->id) {
-                        static::setActiveRecordId($slug, null);
-                        Notification::make()->title('Peserta disembunyikan dari live score')->warning()->duration(1500)->send();
-                    } else {
-                        static::setActiveRecordId($slug, $record->id);
-                        Notification::make()->title('Peserta ditampilkan di live score')->success()->duration(1500)->send();
-                    }
-                }),
+                ->alpineClickHandler(fn ($record) => "window.mtqToggleShowLive('{$slug}', {$record->id}, \$el)"),
 
             Action::make('toggleTimer')
                 ->label('')
@@ -192,6 +185,6 @@ class HasLiveScoreActions
 
     public static function getRecordClasses(string $slug): \Closure
     {
-        return fn ($record) => (!empty(static::getTimerState($slug, $record->id, $record)['is_running'])) ? 'timer-active-row' : '';
+        return fn ($record) => (static::getActiveRecordId($slug) == $record->id) ? 'timer-active-row' : '';
     }
 }

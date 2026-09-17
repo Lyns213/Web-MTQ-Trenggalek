@@ -238,28 +238,233 @@
     };
 
     // 4. TOGGLE SHOW LIVE (TAMPILKAN / SEMBUNYIKAN PESERTA)
-    document.addEventListener('click', function(e) {
-        var btn = e.target.closest('.btn-toggle-show-live');
-        if (btn) {
-            var slug = btn.getAttribute('data-slug') || 'tartil';
-            var recordId = btn.getAttribute('data-record-id');
+    window.mtqToggleShowLive = function(slug, recordId, btn) {
+        var row = btn ? btn.closest('tr') : null;
+        var isActive = btn.getAttribute('data-is-active') === '1';
+
+        if (isActive) {
+            setBtnToShow(btn);
+            if (row) row.classList.remove('timer-active-row');
+            showNotification('Peserta disembunyikan dari live score', 'warning');
+            broadcastTimerSync('unshow_participant', slug, null, 0, 0);
+            fetch(APP_BASE + '/live/' + slug + '/timer/unshow?id=' + recordId);
+        } else {
+            document.querySelectorAll('.btn-toggle-show-live').forEach(function(b) {
+                if (b !== btn) setBtnToShow(b);
+            });
+            document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
+                if (r !== row) r.classList.remove('timer-active-row');
+            });
+
+            setBtnToUnshow(btn);
+            if (row) row.classList.add('timer-active-row');
+            showNotification('Peserta ditampilkan di live score', 'success');
             broadcastTimerSync('show_participant', slug, recordId, 0, 0);
             fetch(APP_BASE + '/live/' + slug + '/timer/show?id=' + recordId);
         }
-    }, false);
+    };
 
-    // 5. FORM MODAL SUBMIT (SIMPAN NILAI)
-    document.addEventListener('click', function(e) {
-        var submitModalBtn = e.target.closest('.fi-modal-submit-action') || (e.target.closest('button[type="submit"]') && e.target.closest('.fi-modal'));
-        if (submitModalBtn) {
-            var activeSlug = (function() {
-                var cell = document.querySelector('.timer-cell');
-                if (cell) return cell.getAttribute('data-slug');
-                return 'tartil';
-            })();
-            broadcastTimerSync('score_saved', activeSlug, null, 0, 0);
+    // =========================================================================
+    // 5. ULTRA-FAST INSTANT INPUT NILAI MODAL (0ms OPEN, 0ms BATAL, FAST SAVE)
+    // =========================================================================
+    var currentEditRecord = {
+        slug: 'tartil',
+        id: null,
+        nama: '',
+        tajwid: 0,
+        irama: 0,
+        fashahah: 0,
+        total: 0
+    };
+
+    function buildModalHtml() {
+        if (document.getElementById('mtq-instant-score-modal')) return;
+
+        var modal = document.createElement('div');
+        modal.id = 'mtq-instant-score-modal';
+        modal.style.cssText = 'display: none; position: fixed; inset: 0; z-index: 99999; align-items: center; justify-content: center; padding: 16px; font-family: inherit;';
+        modal.innerHTML = [
+            '<div id="mtq-modal-backdrop" style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(4px);"></div>',
+            '<div style="position: relative; z-index: 10; width: 100%; max-width: 480px; background: #ffffff; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; border: 1px solid #e2e8f0;">',
+                '<!-- Header -->',
+                '<div style="display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9;">',
+                    '<div>',
+                        '<h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;">Input Nilai</h3>',
+                        '<p style="margin: 4px 0 0; font-size: 12.5px; color: #64748b;">Pastikan input nilai dengan tepat, karena kesempatan mengisi hanya sekali</p>',
+                    '</div>',
+                    '<button type="button" onclick="window.mtqCloseInputNilai()" style="border: none; background: transparent; cursor: pointer; color: #94a3b8; padding: 4px; border-radius: 8px; margin-top: -2px; margin-right: -6px;">',
+                        '<svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>',
+                    '</button>',
+                '</div>',
+                '<!-- Body -->',
+                '<form id="mtq-score-form" onsubmit="window.mtqSubmitInputNilai(event)" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">',
+                    '<div>',
+                        '<label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">Nama</label>',
+                        '<input type="text" id="mtq-field-nama" readonly style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #f8fafc; font-size: 13.5px; font-weight: 600; color: #64748b; outline: none;" />',
+                    '</div>',
+                    '<div>',
+                        '<label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">Tajwid</label>',
+                        '<input type="number" step="0.01" min="0" max="40" id="mtq-field-tajwid" oninput="window.mtqRecalcScore()" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600; color: #0f172a; outline: none; transition: border-color 0.15s;" />',
+                        '<div style="font-size: 11.5px; color: #64748b; margin-top: 4px;"><strong>Petunjuk :</strong> Input nilai maksimal 40</div>',
+                    '</div>',
+                    '<div>',
+                        '<label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">Irama dan suara</label>',
+                        '<input type="number" step="0.01" min="0" max="30" id="mtq-field-irama" oninput="window.mtqRecalcScore()" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600; color: #0f172a; outline: none; transition: border-color 0.15s;" />',
+                        '<div style="font-size: 11.5px; color: #64748b; margin-top: 4px;"><strong>Petunjuk :</strong> Input nilai maksimal 30</div>',
+                    '</div>',
+                    '<div>',
+                        '<label style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px;">Fashahah</label>',
+                        '<input type="number" step="0.01" min="0" max="30" id="mtq-field-fashahah" oninput="window.mtqRecalcScore()" style="width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600; color: #0f172a; outline: none; transition: border-color 0.15s;" />',
+                        '<div style="font-size: 11.5px; color: #64748b; margin-top: 4px;"><strong>Petunjuk :</strong> Input nilai maksimal 30</div>',
+                    '</div>',
+                    '<div>',
+                        '<label style="display: block; font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Total</label>',
+                        '<input type="text" id="mtq-field-total" readonly style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 2px solid #10b981; border-radius: 8px; background: #ecfdf5; font-size: 18px; font-weight: 800; color: #065f46; text-align: center; outline: none;" value="0.00" />',
+                    '</div>',
+                    '<!-- Footer Buttons -->',
+                    '<div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">',
+                        '<button type="submit" id="mtq-btn-save-score" style="padding: 9px 24px; background: #10b981; color: #ffffff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);">',
+                            '<span id="mtq-btn-save-spinner" style="display: none; width: 15px; height: 15px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; animation: mtqSpin 0.6s linear infinite;"></span>',
+                            '<span>Simpan</span>',
+                        '</button>',
+                        '<button type="button" onclick="window.mtqCloseInputNilai()" style="padding: 9px 20px; background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">',
+                            'Batal',
+                        '</button>',
+                    '</div>',
+                '</form>',
+            '</div>',
+        ].join('');
+
+        document.body.appendChild(modal);
+
+        // Click outside to dismiss
+        var backdrop = document.getElementById('mtq-modal-backdrop');
+        if (backdrop) {
+            backdrop.onclick = function() { window.mtqCloseInputNilai(); };
         }
-    }, false);
+
+        // Add spinner CSS animation
+        var style = document.createElement('style');
+        style.textContent = '@keyframes mtqSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+    }
+
+    window.mtqOpenInputNilai = function(slug, recordId, nama, tajwid, irama, fashahah, total) {
+        buildModalHtml();
+
+        currentEditRecord.slug = slug || 'tartil';
+        currentEditRecord.id = recordId;
+        currentEditRecord.nama = nama || '';
+        currentEditRecord.tajwid = parseFloat(tajwid) || 0;
+        currentEditRecord.irama = parseFloat(irama) || 0;
+        currentEditRecord.fashahah = parseFloat(fashahah) || 0;
+        currentEditRecord.total = parseFloat(total) || 0;
+
+        document.getElementById('mtq-field-nama').value = currentEditRecord.nama;
+        document.getElementById('mtq-field-tajwid').value = currentEditRecord.tajwid || '';
+        document.getElementById('mtq-field-irama').value = currentEditRecord.irama || '';
+        document.getElementById('mtq-field-fashahah').value = currentEditRecord.fashahah || '';
+        document.getElementById('mtq-field-total').value = (currentEditRecord.total > 0) ? currentEditRecord.total.toFixed(2) : '0.00';
+
+        var modal = document.getElementById('mtq-instant-score-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(function() {
+                var f = document.getElementById('mtq-field-tajwid');
+                if (f) f.focus();
+            }, 50);
+        }
+    };
+
+    window.mtqCloseInputNilai = function() {
+        var modal = document.getElementById('mtq-instant-score-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    window.mtqRecalcScore = function() {
+        var tEl = document.getElementById('mtq-field-tajwid');
+        var iEl = document.getElementById('mtq-field-irama');
+        var fEl = document.getElementById('mtq-field-fashahah');
+        var totEl = document.getElementById('mtq-field-total');
+
+        var t = parseFloat(tEl ? tEl.value : 0) || 0;
+        var i = parseFloat(iEl ? iEl.value : 0) || 0;
+        var f = parseFloat(fEl ? fEl.value : 0) || 0;
+
+        if (t > 40) { t = 40; if (tEl) tEl.value = 40; }
+        if (i > 30) { i = 30; if (iEl) iEl.value = 30; }
+        if (f > 30) { f = 30; if (fEl) fEl.value = 30; }
+
+        var total = t + i + f;
+        if (totEl) {
+            totEl.value = total.toFixed(2);
+        }
+    };
+
+    window.mtqSubmitInputNilai = function(e) {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+
+        var t = parseFloat(document.getElementById('mtq-field-tajwid')?.value) || 0;
+        var i = parseFloat(document.getElementById('mtq-field-irama')?.value) || 0;
+        var f = parseFloat(document.getElementById('mtq-field-fashahah')?.value) || 0;
+        var total = t + i + f;
+
+        var btn = document.getElementById('mtq-btn-save-score');
+        var spinner = document.getElementById('mtq-btn-save-spinner');
+        if (btn) btn.disabled = true;
+        if (spinner) spinner.style.display = 'inline-block';
+
+        var payload = new URLSearchParams();
+        payload.append('id', currentEditRecord.id);
+        payload.append('tajwid', t);
+        payload.append('irama_dan_suara', i);
+        payload.append('fashahah', f);
+
+        fetch(APP_BASE + '/simpan-nilai/' + currentEditRecord.slug, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: payload.toString()
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (btn) btn.disabled = false;
+            if (spinner) spinner.style.display = 'none';
+
+            window.mtqCloseInputNilai();
+            showNotification('Nilai berhasil disimpan', 'success');
+            broadcastTimerSync('score_saved', currentEditRecord.slug, currentEditRecord.id, 0, 0);
+
+            // Update row in table DOM directly
+            var row = document.querySelector('tr.timer-active-row') || document.querySelector('[data-record-id="' + currentEditRecord.id + '"]')?.closest('tr');
+            if (row) {
+                var cells = row.querySelectorAll('td');
+                // Row format: [0: nama, 1: jk, 2: kec, 3: tajwid, 4: irama, 5: fashahah, 6: total, 7: timer, 8: actions]
+                if (cells.length >= 7) {
+                    updateCellText(cells[3], t);
+                    updateCellText(cells[4], i);
+                    updateCellText(cells[5], f);
+                    updateCellText(cells[6], total.toFixed(2));
+                }
+            }
+        })
+        .catch(function(err) {
+            if (btn) btn.disabled = false;
+            if (spinner) spinner.style.display = 'none';
+            showNotification('Gagal menyimpan nilai', 'danger');
+        });
+    };
+
+    // Close modal on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            window.mtqCloseInputNilai();
+        }
+    });
 
     // 6. Real-time Countdown: Ticks down every 1000ms
     setInterval(function() {

@@ -587,14 +587,24 @@ html.dark .fi-panel-penilaian .penilaian-section-border {
 
 .btn-toggle-timer,
 .btn-reset-timer,
+.btn-toggle-show-live,
 .btn-show-live,
 .btn-unshow-live {
     transition: transform 0.1s ease, filter 0.1s ease !important;
 }
 .btn-toggle-timer:active,
 .btn-reset-timer:active,
+.btn-toggle-show-live:active,
 .btn-show-live:active,
 .btn-unshow-live:active {
     transform: scale(0.9);
+}
+
+/* Hanya tampilkan tombol input nilai (+) pada peserta yang sedang tampil di live score */
+.btn-input-nilai {
+    display: none !important;
+}
+tr.timer-active-row .btn-input-nilai {
+    display: inline-flex !important;
 }
 </style>

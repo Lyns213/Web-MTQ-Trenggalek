@@ -582,4 +582,64 @@ class LiveScoreController extends Controller
             ],
         ]);
     }
+
+    public function simpanNilai(Request $request, $slug = 'tartil')
+    {
+        $slug = strtolower($slug);
+        $id = $request->input('id');
+        if (!$id) {
+            return response()->json(['error' => 'No ID provided'], 400);
+        }
+
+        $cfg = self::$config[$slug] ?? null;
+        if (!$cfg) {
+            return response()->json(['error' => 'Invalid slug'], 400);
+        }
+
+        $modelClass = $cfg['model'];
+        $record = $modelClass::find($id);
+        if (!$record) {
+            return response()->json(['error' => 'Record not found'], 404);
+        }
+
+        $fields = $cfg['fields'] ?? [];
+        $total = 0;
+        foreach ($fields as $field) {
+            $key = $field['key'];
+            $max = $field['max'] ?? 100;
+            $val = min($max, max(0, floatval($request->input($key, 0))));
+            $record->{$key} = $val;
+            $total += $val;
+        }
+
+        $record->total = $total;
+
+        if ($slug === 'tartil') {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_tajwid = ($record->tajwid ?? 0) * 1000000;
+            $record->bobot_irama_dan_suara = ($record->irama_dan_suara ?? 0) * 10000;
+            $record->bobot_fashahah = ($record->fashahah ?? 0) * 100;
+            $record->final_bobot = $record->bobot_tajwid + $record->bobot_irama_dan_suara + $record->bobot_fashahah + $record->bobot_total;
+        } elseif (in_array($slug, ['anak', 'remaja', 'dewasa'])) {
+            $record->bobot_total = $total * 100000000;
+            $record->bobot_tajwid = ($record->tajwid ?? 0) * 1000000;
+            $record->bobot_lagu = ($record->lagu ?? 0) * 10000;
+            $record->bobot_fashahah = ($record->fashahah ?? 0) * 100;
+            $record->final_bobot = $record->bobot_tajwid + $record->bobot_lagu + $record->bobot_fashahah + $record->bobot_total;
+        }
+
+        $record->save();
+
+        $selectedTahunId = session('selected_tahun_id', '0');
+        Cache::forget('stats_hdr_' . $slug . '_' . $selectedTahunId);
+        Cache::forget('cabang_stats_' . md5($modelClass . '_' . $selectedTahunId));
+
+        $fieldKeys = array_column($fields, 'key');
+        return response()->json([
+            'success' => true,
+            'id' => $record->id,
+            'total' => $total,
+            'fields' => $record->only($fieldKeys),
+        ]);
+    }
 }

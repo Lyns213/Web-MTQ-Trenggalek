@@ -63,6 +63,7 @@ Route::withoutMiddleware([
     Route::get("/live-tartil/timer/{action}", function(\Illuminate\Http\Request $request, $action = 'start') {
         return app(LiveScoreController::class)->controlTimer($request, 'tartil', $action);
     })->name("nilai-tartil-live.timer");
+    Route::post("/simpan-nilai/{slug}", [LiveScoreController::class, "simpanNilai"])->name("simpan-nilai");
     Route::get("/mtq-timer-status", [TimerStatusController::class, "index"])->name("timer-status");
 });
 Route::get("/live/{slug}/{id?}", [LiveScoreController::class, "index"])->name("live-score.index");
