@@ -57,6 +57,12 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+            ->navigationGroups([
+                'Pendaftaran Peserta',
+                'Cetak Kartu',
+                'Penilaian',
+                'Pengaturan',
+            ])
             ->unsavedChangesAlerts()
             ->brandLogo(fn () => view('filament.admin.logo'))
             ->brandName('Admin MTQ Trenggalek')

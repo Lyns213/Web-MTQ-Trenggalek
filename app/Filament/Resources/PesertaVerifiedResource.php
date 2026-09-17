@@ -72,12 +72,23 @@ class PesertaVerifiedResource extends Resource
                 //
             ])
             ->actions([
-                // Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('cetak')
+                    ->label('Download PDF')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('warning')
+                    ->url(fn (Peserta $record): string => route('admin.cetak-kartu.peserta.single', $record->id)),
             ])
             ->bulkActions([
-                // Tables\Actions\BulkActionGroup::make([
-                //     Tables\Actions\DeleteBulkAction::make(),
-                // ]),
+                Tables\Actions\BulkAction::make('cetak_massal')
+                    ->label('Download PDF Terpilih')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('warning')
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records, \Livewire\Component $livewire): void {
+                        $ids = $records->pluck('id')->join(',');
+                        $url = route('admin.cetak-kartu.peserta.bulk', ['ids' => $ids]);
+                        $livewire->js("window.location.href = '{$url}'");
+                    })
+                    ->deselectRecordsAfterCompletion(),
             ]);
     }
 

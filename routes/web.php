@@ -27,6 +27,7 @@ use App\Http\Controllers\NilaiSepuluhJuzController;
 use App\Http\Controllers\NilaiDuapuluhJuzController;
 use App\Http\Controllers\NilaiKontemporerController;
 use App\Http\Controllers\NilaiTigapuluhJuzController;
+use App\Http\Controllers\CetakKartuPesertaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,8 +71,13 @@ Route::get("/live/{slug}/{id?}", [LiveScoreController::class, "index"])->name("l
 Route::get("/live-tartil/{id?}", function($id = null) {
     return app(LiveScoreController::class)->index('tartil', $id);
 })->name("nilai-tartil-live.index");
-Route::fallback(function() {
-    return redirect()->back();
+
+Route::middleware(['web', 'auth'])->prefix('admin/cetak-kartu')->name('admin.cetak-kartu.')->group(function () {
+    Route::get('/peserta/{id}', [CetakKartuPesertaController::class, 'single'])->name('peserta.single');
+    Route::get('/peserta-bulk', [CetakKartuPesertaController::class, 'bulk'])->name('peserta.bulk');
+    Route::post('/dewan-hakim/download', [CetakKartuPesertaController::class, 'downloadDewanHakim'])->name('dewan-hakim.download');
+    Route::post('/panitera/download', [CetakKartuPesertaController::class, 'downloadPanitera'])->name('panitera.download');
+    Route::post('/panitia/download', [CetakKartuPesertaController::class, 'downloadPanitia'])->name('panitia.download');
 });
 
 // Route::middleware('auth')->group(function () {
@@ -90,4 +96,8 @@ Route::middleware([TimerAuth::class])->group(function () {
     Route::get('/nilai-tigapuluhjuz/{id?}', [NilaiTigapuluhJuzController::class, 'index'])->name('nilai-tigapuluhjuz.index');
     Route::get('/nilai-msq/{id?}', [NilaiMsqController::class, 'index'])->name('nilai-msq.index');
     Route::get('/nilai-mmq/{id?}', [NilaiMmqController::class, 'index'])->name('nilai-mmq.index');
+});
+
+Route::fallback(function() {
+    return redirect()->back();
 });
