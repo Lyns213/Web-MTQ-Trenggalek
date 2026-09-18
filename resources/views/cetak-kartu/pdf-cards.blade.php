@@ -58,10 +58,10 @@
 
             .photo-wrap-single {
                 position: absolute;
-                left: 37.5mm;
-                top: 71mm;
-                width: 30mm;
-                height: 39.5mm;
+                left: 37.1mm;
+                top: 70.3mm;
+                width: 30.8mm;
+                height: 42.8mm;
                 overflow: hidden;
                 background-color: #ffffff;
                 text-align: center;
@@ -71,14 +71,13 @@
             .photo-img-single {
                 width: 100%;
                 height: 100%;
-                object-fit: cover;
                 display: block;
             }
 
             .photo-ph-single {
                 width: 100%;
                 height: 100%;
-                line-height: 39.5mm;
+                line-height: 42.8mm;
                 font-size: 26pt;
                 color: #94a3b8;
                 text-align: center;
@@ -115,12 +114,12 @@
 
             .name-wrap-single-official {
                 position: absolute;
-                top: 121mm;
+                top: 119.5mm;
                 left: 4mm;
                 right: 4mm;
                 text-align: center;
                 z-index: 5;
-                height: 15mm;
+                height: 18mm;
                 overflow: hidden;
             }
 
@@ -130,6 +129,15 @@
                 color: #000000;
                 text-transform: uppercase;
                 line-height: 1.2;
+            }
+
+            .name-text-single-official {
+                font-size: 13.5pt;
+                font-weight: 900;
+                color: #000000;
+                text-transform: uppercase;
+                line-height: 1.25;
+                letter-spacing: 0.5px;
             }
 
         @else
@@ -204,10 +212,10 @@
 
             .photo-wrap {
                 position: absolute;
-                left: 32.9mm;
-                top: 60.5mm;
-                width: 26.3mm;
-                height: 33.9mm;
+                left: 32.5mm;
+                top: 59.9mm;
+                width: 27.0mm;
+                height: 36.5mm;
                 overflow: hidden;
                 background-color: #ffffff;
                 text-align: center;
@@ -217,14 +225,13 @@
             .photo-img {
                 width: 100%;
                 height: 100%;
-                object-fit: cover;
                 display: block;
             }
 
             .photo-ph {
                 width: 100%;
                 height: 100%;
-                line-height: 33.9mm;
+                line-height: 36.5mm;
                 font-size: 22pt;
                 color: #94a3b8;
                 text-align: center;
@@ -261,12 +268,12 @@
 
             .name-wrap-official {
                 position: absolute;
-                top: 102.5mm;
+                top: 101.5mm;
                 left: 4mm;
                 right: 4mm;
                 text-align: center;
                 z-index: 5;
-                height: 11mm;
+                height: 13.5mm;
                 overflow: hidden;
             }
 
@@ -276,6 +283,15 @@
                 color: #000000;
                 text-transform: uppercase;
                 line-height: 1.15;
+            }
+
+            .name-text-official {
+                font-size: 11pt;
+                font-weight: 900;
+                color: #000000;
+                text-transform: uppercase;
+                line-height: 1.2;
+                letter-spacing: 0.4px;
             }
         @endif
     </style>
@@ -300,13 +316,15 @@
             @endif
 
             <!-- Pasfoto -->
-            <div class="photo-wrap-single">
-                @if(!empty($item['photo_base64']))
-                    <img src="{{ $item['photo_base64'] }}" class="photo-img-single">
-                @else
-                    <div class="photo-ph-single">&#128100;</div>
-                @endif
-            </div>
+            @if($role === 'peserta' || !empty($item['photo_base64']))
+                <div class="photo-wrap-single">
+                    @if(!empty($item['photo_base64']))
+                        <img src="{{ $item['photo_base64'] }}" class="photo-img-single">
+                    @else
+                        <div class="photo-ph-single">&#128100;</div>
+                    @endif
+                </div>
+            @endif
 
             @if($role === 'peserta')
                 <!-- Nomor Peserta -->
@@ -321,7 +339,7 @@
             @else
                 <!-- Nama Official -->
                 <div class="name-wrap-single-official">
-                    <span class="name-text-single">{{ $item['nama'] ?? '-' }}</span>
+                    <span class="name-text-single-official">{{ $item['nama'] ?? '-' }}</span>
                 </div>
             @endif
         </div>
@@ -332,6 +350,9 @@
         @endphp
 
         @foreach($chunks as $chunkIndex => $chunk)
+            @php
+                $chunk = $chunk->values();
+            @endphp
             <table class="sheet-table" cellpadding="0" cellspacing="0">
                 <tr>
                     @php $c1 = $chunk->get(0); @endphp

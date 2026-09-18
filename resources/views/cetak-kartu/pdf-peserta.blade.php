@@ -263,6 +263,9 @@
     @endphp
 
     @foreach($chunks as $chunkIndex => $chunk)
+        @php
+            $chunk = $chunk->values();
+        @endphp
         <table class="sheet-table" cellpadding="0" cellspacing="0">
             <tr>
                 @php $p1 = $chunk->get(0); @endphp
