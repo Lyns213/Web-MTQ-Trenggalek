@@ -272,7 +272,6 @@ class LiveScoreController extends Controller
         if (!$id) {
             $currentRecord = $records->first();
             if ($currentRecord) {
-                Cache::put('mtq_live_active_' . $slug, $currentRecord->id, 86400);
                 $liveActiveId = $currentRecord->id;
             }
         } else {
@@ -288,7 +287,6 @@ class LiveScoreController extends Controller
             if (!$currentRecord) {
                 $currentRecord = $records->first();
                 if ($currentRecord) {
-                    Cache::put('mtq_live_active_' . $slug, $currentRecord->id, 86400);
                     $liveActiveId = $currentRecord->id;
                 }
             }

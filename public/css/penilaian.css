@@ -88,23 +88,95 @@
     color: #374151 !important;
 }
 
-/* Timer Active Row - Green matching timer font (#34d399) */
+/* Timer Active Row Highlight - Surrounding Border & Color matching Timer Phase */
 .fi-ta table tbody tr.timer-active-row,
 .fi-ta table tbody tr.timer-active-row > td {
-    background: rgba(16, 185, 129, 0.16) !important;
+    transition: all 0.25s ease !important;
 }
 
-.fi-ta table tbody tr.timer-active-row:hover,
-.fi-ta table tbody tr.timer-active-row:hover > td {
-    background: rgba(16, 185, 129, 0.24) !important;
+/* Green Phase (Default / > 60s) */
+.fi-ta table tbody tr.timer-active-row.timer-phase-green > td,
+.fi-ta table tbody tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) > td {
+    background-color: rgba(16, 185, 129, 0.12) !important;
+    border-top: 2px solid #10b981 !important;
+    border-bottom: 2px solid #10b981 !important;
+}
+.fi-ta table tbody tr.timer-active-row.timer-phase-green > td:first-child,
+.fi-ta table tbody tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) > td:first-child {
+    border-left: 2.5px solid #10b981 !important;
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+.fi-ta table tbody tr.timer-active-row.timer-phase-green > td:last-child,
+.fi-ta table tbody tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) > td:last-child {
+    border-right: 2.5px solid #10b981 !important;
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
 }
 
-/* Timer Cell */
+/* Yellow Phase (<= 60s) */
+.fi-ta table tbody tr.timer-active-row.timer-phase-yellow > td {
+    background-color: rgba(245, 158, 11, 0.14) !important;
+    border-top: 2px solid #f59e0b !important;
+    border-bottom: 2px solid #f59e0b !important;
+}
+.fi-ta table tbody tr.timer-active-row.timer-phase-yellow > td:first-child {
+    border-left: 2.5px solid #f59e0b !important;
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+.fi-ta table tbody tr.timer-active-row.timer-phase-yellow > td:last-child {
+    border-right: 2.5px solid #f59e0b !important;
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+
+/* Red Phase (<= 0s) */
+.fi-ta table tbody tr.timer-active-row.timer-phase-red > td {
+    background-color: rgba(239, 68, 68, 0.16) !important;
+    border-top: 2px solid #ef4444 !important;
+    border-bottom: 2px solid #ef4444 !important;
+}
+.fi-ta table tbody tr.timer-active-row.timer-phase-red > td:first-child {
+    border-left: 2.5px solid #ef4444 !important;
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+.fi-ta table tbody tr.timer-active-row.timer-phase-red > td:last-child {
+    border-right: 2.5px solid #ef4444 !important;
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+
+/* Timer Cell Typography and Phases */
 .timer-cell {
-    font-family: ui-monospace, monospace !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
     font-weight: 700 !important;
     font-size: 13.5px !important;
-    color: #34d399 !important;
+    letter-spacing: 0.5px;
+    padding: 3px 10px;
+    border-radius: 8px;
+    border: 1.5px solid;
+    transition: all 0.25s ease;
+}
+.timer-cell.timer-phase-green,
+.timer-cell:not(.timer-phase-yellow):not(.timer-phase-red) {
+    color: #10b981 !important;
+    border-color: rgba(16, 185, 129, 0.6) !important;
+    background: rgba(16, 185, 129, 0.16) !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3) !important;
+}
+.timer-cell.timer-phase-yellow {
+    color: #f59e0b !important;
+    border-color: rgba(245, 158, 11, 0.7) !important;
+    background: rgba(245, 158, 11, 0.2) !important;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.35) !important;
+}
+.timer-cell.timer-phase-red {
+    color: #ef4444 !important;
+    border-color: rgba(239, 68, 68, 0.8) !important;
+    background: rgba(239, 68, 68, 0.22) !important;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.45) !important;
 }
 
 /* Search and Filter */

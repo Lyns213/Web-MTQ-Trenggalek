@@ -902,38 +902,79 @@ var audioStart = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
 var audioMid = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
 var audioEnd = new Audio('{{ asset("sounds/mtqend.mp3") }}');
 
+var audioCtx = null;
+function getAudioContext() {
+    if (!audioCtx) {
+        var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+        }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(function() {});
+    }
+    return audioCtx;
+}
+
 function unlockAudioSystem() {
+    getAudioContext();
     [audioStart, audioMid, audioEnd].forEach(function(a) {
         if (!a) return;
         try {
+            a.muted = true;
             var p = a.play();
             if (p && typeof p.then === 'function') {
                 p.then(function() {
                     a.pause();
                     a.currentTime = 0;
-                }).catch(function() {});
+                    a.muted = false;
+                }).catch(function() {
+                    a.muted = false;
+                });
+            } else {
+                a.muted = false;
             }
-        } catch(e) {}
+        } catch(e) {
+            a.muted = false;
+        }
     });
 }
 
 ['click', 'touchstart', 'keydown', 'mousedown'].forEach(function(evt) {
-    document.addEventListener(evt, unlockAudioSystem, { once: true, passive: true });
+    document.addEventListener(evt, unlockAudioSystem, { once: false, passive: true });
 });
 
-function playAudio(audio) {
-    if (!audio) return;
+function playToneBeep(count, type) {
     try {
-        audio.currentTime = 0;
-        var p = audio.play();
-        if (p && typeof p.catch === 'function') {
-            p.catch(function(e) {
-                console.warn('Audio play error:', e);
-            });
+        var ctx = getAudioContext();
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var freq = (type === 'start') ? 880 : ((type === 'mid') ? 784 : 587);
+        var duration = (type === 'start') ? 0.35 : ((type === 'mid') ? 0.28 : 0.4);
+        var gap = duration + 0.12;
+
+        for (var i = 0; i < count; i++) {
+            var st = now + (i * gap);
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+
+            osc.type = (type === 'end') ? 'triangle' : 'sine';
+            osc.frequency.setValueAtTime(freq, st);
+            if (type === 'end') {
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.7, st + duration);
+            }
+
+            gain.gain.setValueAtTime(0.5, st);
+            gain.gain.setValueAtTime(0.5, st + duration - 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.0001, st + duration);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(st);
+            osc.stop(st + duration);
         }
-    } catch(e) {
-        console.warn(e);
-    }
+    } catch(e) {}
 }
 
 let playedMidSound = timerSeconds <= 60 && timerSeconds > 0;
@@ -942,7 +983,22 @@ let playedEndSound = timerSeconds <= 0;
 function playBeeps(count, type) {
     unlockAudioSystem();
     var audio = type === 'start' ? audioStart : (type === 'mid' ? audioMid : audioEnd);
-    playAudio(audio);
+    if (audio) {
+        try {
+            audio.currentTime = 0;
+            var p = audio.play();
+            if (p && typeof p.then === 'function') {
+                p.then(function() {
+                }).catch(function(e) {
+                    playToneBeep(count, type);
+                });
+            }
+        } catch(e) {
+            playToneBeep(count, type);
+        }
+    } else {
+        playToneBeep(count, type);
+    }
 }
 
 function showLiveToast(msg) {

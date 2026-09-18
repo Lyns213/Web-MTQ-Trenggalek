@@ -1,7 +1,13 @@
 <style>
 @keyframes mtqSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes mtqPulseGlowRed {
+    0% { box-shadow: inset 0 0 0 2px #ef4444, 0 0 10px rgba(239, 68, 68, 0.35); }
+    100% { box-shadow: inset 0 0 0 2px #ef4444, 0 0 22px rgba(239, 68, 68, 0.7); }
+}
+
+/* Timer Cell: ONLY display on the active row or when explicitly shown */
 .timer-cell {
-    display: inline-flex !important;
+    display: none;
     align-items: center;
     justify-content: center;
     min-width: 62px;
@@ -10,60 +16,236 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
     font-weight: 700 !important;
     font-size: 13.5px !important;
-    background: rgba(16, 185, 129, 0.08);
-    color: #34d399 !important;
-    border: 1px solid rgba(52, 211, 153, 0.25);
     box-sizing: border-box;
     letter-spacing: 0.5px;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
 }
-.timer-cell[data-is-running="1"],
 tr.timer-active-row .timer-cell {
-    background: rgba(16, 185, 129, 0.22) !important;
-    color: #34d399 !important;
-    border-color: rgba(52, 211, 153, 0.6) !important;
-    box-shadow: 0 0 10px rgba(52, 211, 153, 0.3) !important;
+    display: inline-flex !important;
 }
-tr.timer-active-row,
-tr.timer-active-row > td,
-.fi-ta table tbody tr.timer-active-row,
-.fi-ta table tbody tr.timer-active-row > td {
-    background-color: rgba(16, 185, 129, 0.16) !important;
+
+/* 1. GREEN PHASE (> 60s) */
+.timer-cell.timer-phase-green,
+tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) .timer-cell {
+    color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.16) !important;
+    border: 1.5px solid rgba(16, 185, 129, 0.6) !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35) !important;
 }
-tr.timer-active-row:hover,
-tr.timer-active-row:hover > td,
-.fi-ta table tbody tr.timer-active-row:hover,
-.fi-ta table tbody tr.timer-active-row:hover > td {
-    background-color: rgba(16, 185, 129, 0.24) !important;
+tr.timer-active-row.timer-phase-green,
+tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) {
+    box-shadow: inset 0 0 0 2px #10b981, 0 0 14px rgba(16, 185, 129, 0.35) !important;
+    border-radius: 12px !important;
 }
-tr.timer-active-row {
-    box-shadow: inset 4px 0 0 #34d399 !important;
+tr.timer-active-row.timer-phase-green > td,
+tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) > td {
+    background-color: rgba(16, 185, 129, 0.12) !important;
+    border-top: 2px solid #10b981 !important;
+    border-bottom: 2px solid #10b981 !important;
 }
-tr.timer-active-row > td:first-child {
-    border-left: 4px solid #34d399 !important;
+tr.timer-active-row.timer-phase-green > td:first-child,
+tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) > td:first-child {
+    border-left: 2.5px solid #10b981 !important;
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+tr.timer-active-row.timer-phase-green > td:last-child,
+tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) > td:last-child {
+    border-right: 2.5px solid #10b981 !important;
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+
+/* 2. YELLOW PHASE (<= 60s) */
+.timer-cell.timer-phase-yellow {
+    color: #f59e0b !important;
+    background: rgba(245, 158, 11, 0.2) !important;
+    border: 1.5px solid rgba(245, 158, 11, 0.7) !important;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.4) !important;
+}
+tr.timer-active-row.timer-phase-yellow {
+    box-shadow: inset 0 0 0 2px #f59e0b, 0 0 16px rgba(245, 158, 11, 0.4) !important;
+    border-radius: 12px !important;
+}
+tr.timer-active-row.timer-phase-yellow > td {
+    background-color: rgba(245, 158, 11, 0.14) !important;
+    border-top: 2px solid #f59e0b !important;
+    border-bottom: 2px solid #f59e0b !important;
+}
+tr.timer-active-row.timer-phase-yellow > td:first-child {
+    border-left: 2.5px solid #f59e0b !important;
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+tr.timer-active-row.timer-phase-yellow > td:last-child {
+    border-right: 2.5px solid #f59e0b !important;
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+
+/* 3. RED PHASE (<= 0s) */
+.timer-cell.timer-phase-red {
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.22) !important;
+    border: 1.5px solid rgba(239, 68, 68, 0.8) !important;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.5) !important;
+}
+tr.timer-active-row.timer-phase-red {
+    box-shadow: inset 0 0 0 2px #ef4444, 0 0 20px rgba(239, 68, 68, 0.5) !important;
+    border-radius: 12px !important;
+    animation: mtqPulseGlowRed 1s infinite alternate ease-in-out;
+}
+tr.timer-active-row.timer-phase-red > td {
+    background-color: rgba(239, 68, 68, 0.16) !important;
+    border-top: 2px solid #ef4444 !important;
+    border-bottom: 2px solid #ef4444 !important;
+}
+tr.timer-active-row.timer-phase-red > td:first-child {
+    border-left: 2.5px solid #ef4444 !important;
+    border-top-left-radius: 10px !important;
+    border-bottom-left-radius: 10px !important;
+}
+tr.timer-active-row.timer-phase-red > td:last-child {
+    border-right: 2.5px solid #ef4444 !important;
+    border-top-right-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
 }
 </style>
 <script>
 (function() {
     var APP_BASE = '{{ url("/") }}';
-    var audioStart = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
-    var audioMid = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
-    var audioEnd = new Audio('{{ asset("sounds/mtqend.mp3") }}');
+    var audioUrls = {
+        start: '{{ asset("sounds/mtqstart.mp3") }}',
+        mid: '{{ asset("sounds/mtqmid.mp3") }}',
+        end: '{{ asset("sounds/mtqend.mp3") }}'
+    };
 
-    function playAudio(audio) {
-        if (!audio) return;
-        try {
-            audio.currentTime = 0;
-            var p = audio.play();
-            if (p && typeof p.catch === 'function') {
-                p.catch(function(e) {});
+    var audioStart = new Audio(audioUrls.start);
+    var audioMid = new Audio(audioUrls.mid);
+    var audioEnd = new Audio(audioUrls.end);
+
+    [audioStart, audioMid, audioEnd].forEach(function(a) {
+        a.preload = 'auto';
+        try { a.load(); } catch(e) {}
+    });
+
+    var audioCtx = null;
+    function getAudioContext() {
+        if (!audioCtx) {
+            var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                audioCtx = new AudioContextClass();
             }
-        } catch(e) {}
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(function() {});
+        }
+        return audioCtx;
+    }
+
+    function unlockAudioSystem() {
+        getAudioContext();
+        [audioStart, audioMid, audioEnd].forEach(function(a) {
+            if (!a) return;
+            try {
+                a.muted = true;
+                var p = a.play();
+                if (p && typeof p.then === 'function') {
+                    p.then(function() {
+                        a.pause();
+                        a.currentTime = 0;
+                        a.muted = false;
+                    }).catch(function() {
+                        a.muted = false;
+                    });
+                } else {
+                    a.muted = false;
+                }
+            } catch(e) {
+                a.muted = false;
+            }
+        });
+    }
+
+    ['click', 'touchstart', 'keydown', 'mousedown'].forEach(function(evt) {
+        document.addEventListener(evt, unlockAudioSystem, { once: false, passive: true });
+    });
+
+    function playToneBeep(count, type) {
+        try {
+            var ctx = getAudioContext();
+            if (!ctx) return;
+            var now = ctx.currentTime;
+            var freq = (type === 'start') ? 880 : ((type === 'mid') ? 784 : 587);
+            var duration = (type === 'start') ? 0.35 : ((type === 'mid') ? 0.28 : 0.4);
+            var gap = duration + 0.12;
+
+            for (var i = 0; i < count; i++) {
+                var st = now + (i * gap);
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+
+                osc.type = (type === 'end') ? 'triangle' : 'sine';
+                osc.frequency.setValueAtTime(freq, st);
+                if (type === 'end') {
+                    osc.frequency.exponentialRampToValueAtTime(freq * 0.7, st + duration);
+                }
+
+                gain.gain.setValueAtTime(0.5, st);
+                gain.gain.setValueAtTime(0.5, st + duration - 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.0001, st + duration);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start(st);
+                osc.stop(st + duration);
+            }
+        } catch(e) {
+            console.warn('Tone synth error:', e);
+        }
     }
 
     function playBeeps(count, type) {
-        var audio = type === 'start' ? audioStart : (type === 'mid' ? audioMid : audioEnd);
-        playAudio(audio);
+        unlockAudioSystem();
+        var audio = (type === 'start') ? audioStart : ((type === 'mid') ? audioMid : audioEnd);
+        var played = false;
+
+        if (audio) {
+            try {
+                audio.currentTime = 0;
+                var p = audio.play();
+                if (p && typeof p.then === 'function') {
+                    p.then(function() {
+                        played = true;
+                    }).catch(function(err) {
+                        console.warn('Audio play blocked/failed, playing tone synth:', err);
+                        playToneBeep(count, type);
+                    });
+                } else {
+                    played = true;
+                }
+            } catch(e) {
+                console.warn('Audio play exception, playing tone synth:', e);
+                playToneBeep(count, type);
+            }
+        } else {
+            playToneBeep(count, type);
+        }
+    }
+
+    function updateRowAndCellPhase(cell, rem) {
+        if (!cell) return;
+        var row = cell.closest('tr');
+        var phase = (rem <= 0) ? 'timer-phase-red' : ((rem <= 60) ? 'timer-phase-yellow' : 'timer-phase-green');
+
+        cell.classList.remove('timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
+        cell.classList.add(phase);
+
+        if (row && row.classList.contains('timer-active-row')) {
+            row.classList.remove('timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
+            row.classList.add(phase);
+        }
     }
 
     function formatTime(seconds, format) {
@@ -231,10 +413,18 @@ tr.timer-active-row > td:first-child {
         var row = btn ? btn.closest('tr') : null;
         var cell = row ? row.querySelector('.timer-cell') : document.querySelector('.timer-cell[data-record-id="' + recordId + '"]');
 
-        // Ensure this row is marked active
+        // Only show timer on this row, hide all others
+        if (cell) {
+            cell.style.display = 'inline-flex';
+        }
+        document.querySelectorAll('.timer-cell').forEach(function(c) {
+            if (c !== cell) c.style.display = 'none';
+        });
+
+        // Ensure this row is marked active and others are deactivated
         if (row) {
             document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
-                if (r !== row) r.classList.remove('timer-active-row');
+                if (r !== row) r.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
             });
             row.classList.add('timer-active-row');
 
@@ -252,15 +442,22 @@ tr.timer-active-row > td:first-child {
         var total = parseInt(cell ? cell.getAttribute('data-total-seconds') : '300', 10) || 300;
         if (isNaN(rem) || rem <= 0) rem = total;
 
+        if (cell) {
+            updateRowAndCellPhase(cell, rem);
+        }
+
         if (!isRunning) {
-            if (rem >= total - 2) {
+            if (rem > 60) {
                 playedMidMap[recordId] = false;
+                playedEndMap[recordId] = false;
+            } else if (rem > 0) {
                 playedEndMap[recordId] = false;
             }
             if (cell) {
                 cell.setAttribute('data-is-running', '1');
                 cell.setAttribute('data-remaining', rem);
                 updateCellText(cell, formatTime(rem, cell.getAttribute('data-format') || 'ms'));
+                updateRowAndCellPhase(cell, rem);
             }
             // Reset other toggle buttons
             document.querySelectorAll('.btn-toggle-timer').forEach(function(b) {
@@ -274,6 +471,7 @@ tr.timer-active-row > td:first-child {
         } else {
             if (cell) {
                 cell.setAttribute('data-is-running', '0');
+                updateRowAndCellPhase(cell, rem);
             }
             setBtnToPlay(btn);
             showNotification('Timer dijeda', 'warning');
@@ -297,6 +495,7 @@ tr.timer-active-row > td:first-child {
             cell.setAttribute('data-remaining', total);
             var format = cell.getAttribute('data-format') || 'ms';
             updateCellText(cell, formatTime(total, format));
+            updateRowAndCellPhase(cell, total);
         }
 
         if (row) {
@@ -319,26 +518,28 @@ tr.timer-active-row > td:first-child {
         if (isActive) {
             setBtnToShow(btn);
             if (row) {
-                row.classList.remove('timer-active-row');
+                row.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
                 var toggleBtn = row.querySelector('.btn-toggle-timer');
                 if (toggleBtn) setBtnToPlay(toggleBtn);
             }
             if (cell) {
+                cell.style.display = 'none';
                 cell.setAttribute('data-is-running', '0');
             }
             showNotification('Peserta disembunyikan dari live score', 'warning');
             broadcastTimerSync('unshow_participant', slug, null, 0, 0);
             fetch(APP_BASE + '/live/' + slug + '/timer/unshow?id=' + recordId);
         } else {
-            // Reset other buttons and rows
+            // Reset other buttons, rows, and cells
             document.querySelectorAll('.btn-toggle-show-live').forEach(function(b) {
                 if (b !== btn) setBtnToShow(b);
             });
             document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
-                if (r !== row) r.classList.remove('timer-active-row');
+                if (r !== row) r.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
             });
             document.querySelectorAll('.timer-cell').forEach(function(c) {
                 if (c !== cell) {
+                    c.style.display = 'none';
                     c.setAttribute('data-is-running', '0');
                 }
             });
@@ -346,12 +547,13 @@ tr.timer-active-row > td:first-child {
             setBtnToUnshow(btn);
             if (row) row.classList.add('timer-active-row');
 
-            // Move & show timer on this row
+            // Move & show timer ONLY on this row
             if (cell) {
                 cell.style.display = 'inline-flex';
                 var rem = parseInt(cell.getAttribute('data-remaining') || '300', 10);
                 var format = cell.getAttribute('data-format') || 'ms';
                 updateCellText(cell, formatTime(rem, format));
+                updateRowAndCellPhase(cell, rem);
             }
 
             showNotification('Peserta ditampilkan di live score', 'success');
@@ -365,6 +567,7 @@ tr.timer-active-row > td:first-child {
                         cell.setAttribute('data-is-running', data.timer.is_running ? '1' : '0');
                         var format = cell.getAttribute('data-format') || 'ms';
                         updateCellText(cell, formatTime(data.timer.remaining, format));
+                        updateRowAndCellPhase(cell, data.timer.remaining);
                         var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
                         if (toggleBtn) {
                             if (data.timer.is_running) setBtnToPause(toggleBtn);
@@ -700,14 +903,22 @@ tr.timer-active-row > td:first-child {
 
                 var format = cell.getAttribute('data-format') || 'ms';
                 updateCellText(cell, formatTime(rem, format));
+                updateRowAndCellPhase(cell, rem);
 
-                if (rem <= 60 && rem > 0 && !playedMidMap[recordId]) {
-                    playedMidMap[recordId] = true;
-                    playBeeps(2, 'mid');
+                if (rem > 60) {
+                    playedMidMap[recordId] = false;
+                    playedEndMap[recordId] = false;
+                } else if (rem <= 60 && rem > 0) {
+                    playedEndMap[recordId] = false;
+                    if (!playedMidMap[recordId]) {
+                        playedMidMap[recordId] = true;
+                        playBeeps(2, 'mid');
+                    }
                 }
 
                 if (rem <= 0) {
                     cell.setAttribute('data-is-running', '0');
+                    updateRowAndCellPhase(cell, 0);
                     var row = cell.closest('tr');
                     if (row) {
                         var toggleBtn = row.querySelector('.btn-toggle-timer');
@@ -722,10 +933,15 @@ tr.timer-active-row > td:first-child {
                 cell.setAttribute('data-is-running', '0');
                 var format = cell.getAttribute('data-format') || 'ms';
                 updateCellText(cell, formatTime(0, format));
+                updateRowAndCellPhase(cell, 0);
                 var row = cell.closest('tr');
                 if (row) {
                     var toggleBtn = row.querySelector('.btn-toggle-timer');
                     if (toggleBtn) setBtnToPlay(toggleBtn);
+                }
+                if (!playedEndMap[recordId]) {
+                    playedEndMap[recordId] = true;
+                    playBeeps(3, 'end');
                 }
             }
         });
@@ -748,14 +964,17 @@ tr.timer-active-row > td:first-child {
                     var tInfo = data.timers[slug];
                     var row = cell.closest('tr');
 
-                    if (tInfo && tInfo.record_id === recordId) {
+                    if (tInfo && tInfo.record_id && tInfo.record_id === recordId) {
+                        cell.style.display = 'inline-flex';
                         cell.setAttribute('data-is-running', tInfo.is_running ? '1' : '0');
                         var localRem = parseInt(cell.getAttribute('data-remaining'), 10);
                         if (isNaN(localRem) || Math.abs(localRem - tInfo.remaining) > 2) {
                             cell.setAttribute('data-remaining', tInfo.remaining);
                             var format = cell.getAttribute('data-format') || 'ms';
                             updateCellText(cell, formatTime(tInfo.remaining, format));
+                            localRem = tInfo.remaining;
                         }
+                        updateRowAndCellPhase(cell, localRem);
                         if (row) {
                             row.classList.add('timer-active-row');
                             var toggleBtn = row.querySelector('.btn-toggle-timer');
@@ -766,9 +985,11 @@ tr.timer-active-row > td:first-child {
                             var showBtn = row.querySelector('.btn-toggle-show-live');
                             if (showBtn) setBtnToUnshow(showBtn);
                         }
-                    } else if (tInfo && tInfo.record_id !== recordId) {
+                    } else {
+                        cell.style.display = 'none';
+                        cell.setAttribute('data-is-running', '0');
                         if (row) {
-                            row.classList.remove('timer-active-row');
+                            row.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
                             var showBtn = row.querySelector('.btn-toggle-show-live');
                             if (showBtn) setBtnToShow(showBtn);
                             var toggleBtn = row.querySelector('.btn-toggle-timer');
@@ -795,6 +1016,7 @@ tr.timer-active-row > td:first-child {
                     var row = cell.closest('tr');
 
                     if (ev.recordId && ev.recordId === recordId) {
+                        cell.style.display = 'inline-flex';
                         if (row) row.classList.add('timer-active-row');
                         var showBtn = row ? row.querySelector('.btn-toggle-show-live') : null;
                         if (showBtn) setBtnToUnshow(showBtn);
@@ -803,14 +1025,18 @@ tr.timer-active-row > td:first-child {
                             cell.setAttribute('data-is-running', '1');
                             if (ev.remaining !== undefined) cell.setAttribute('data-remaining', ev.remaining);
                             var format = cell.getAttribute('data-format') || 'ms';
-                            updateCellText(cell, formatTime(parseInt(cell.getAttribute('data-remaining'), 10), format));
+                            var curRem = parseInt(cell.getAttribute('data-remaining'), 10);
+                            updateCellText(cell, formatTime(curRem, format));
+                            updateRowAndCellPhase(cell, curRem);
                             var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
                             if (toggleBtn) setBtnToPause(toggleBtn);
                         } else if (ev.action === 'pause') {
                             cell.setAttribute('data-is-running', '0');
                             if (ev.remaining !== undefined) cell.setAttribute('data-remaining', ev.remaining);
                             var format = cell.getAttribute('data-format') || 'ms';
-                            updateCellText(cell, formatTime(parseInt(cell.getAttribute('data-remaining'), 10), format));
+                            var curRem = parseInt(cell.getAttribute('data-remaining'), 10);
+                            updateCellText(cell, formatTime(curRem, format));
+                            updateRowAndCellPhase(cell, curRem);
                             var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
                             if (toggleBtn) setBtnToPlay(toggleBtn);
                         } else if (ev.action === 'reset') {
@@ -819,20 +1045,25 @@ tr.timer-active-row > td:first-child {
                             cell.setAttribute('data-remaining', total);
                             var format = cell.getAttribute('data-format') || 'ms';
                             updateCellText(cell, formatTime(total, format));
+                            updateRowAndCellPhase(cell, total);
                             var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
                             if (toggleBtn) setBtnToPlay(toggleBtn);
                         }
                     } else if (ev.recordId && ev.recordId !== recordId) {
+                        cell.style.display = 'none';
+                        cell.setAttribute('data-is-running', '0');
                         if (row) {
-                            row.classList.remove('timer-active-row');
+                            row.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
                             var showBtn = row.querySelector('.btn-toggle-show-live');
                             if (showBtn) setBtnToShow(showBtn);
                             var toggleBtn = row.querySelector('.btn-toggle-timer');
                             if (toggleBtn) setBtnToPlay(toggleBtn);
                         }
                     } else if (ev.action === 'unshow_participant') {
+                        cell.style.display = 'none';
+                        cell.setAttribute('data-is-running', '0');
                         if (row) {
-                            row.classList.remove('timer-active-row');
+                            row.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
                             var showBtn = row.querySelector('.btn-toggle-show-live');
                             if (showBtn) setBtnToShow(showBtn);
                             var toggleBtn = row.querySelector('.btn-toggle-timer');

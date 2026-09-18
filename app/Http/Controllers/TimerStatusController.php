@@ -50,6 +50,8 @@ class TimerStatusController extends Controller
                         'is_running' => (bool)($timerState['is_running'] ?? false),
                     ];
                 }
+            } else {
+                $timers[$slug] = null;
             }
         }
 

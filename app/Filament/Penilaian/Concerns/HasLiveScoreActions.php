@@ -102,14 +102,17 @@ class HasLiveScoreActions
                 $s = $remaining % 60;
                 $formatted = sprintf('%02d:%02d', $m, $s);
                 $isRunning = (!empty($timerState['is_running'])) ? '1' : '0';
+                $display = $isActive ? 'inline-flex' : 'none';
+                $phase = ($remaining <= 0) ? 'timer-phase-red' : (($remaining <= 60) ? 'timer-phase-yellow' : 'timer-phase-green');
 
-                return '<span class="timer-cell" '
+                return '<span class="timer-cell ' . $phase . '" '
                     . 'data-slug="' . htmlspecialchars($slug, ENT_QUOTES) . '" '
                     . 'data-record-id="' . (int)$record->id . '" '
                     . 'data-total-seconds="' . $total . '" '
                     . 'data-remaining="' . $remaining . '" '
                     . 'data-is-running="' . $isRunning . '" '
-                    . 'data-format="ms">'
+                    . 'data-format="ms" '
+                    . 'style="display: ' . $display . ';">'
                     . $formatted
                     . '</span>';
             });
@@ -292,6 +295,19 @@ class HasLiveScoreActions
 
     public static function getRecordClasses(string $slug): \Closure
     {
-        return fn ($record) => (static::getActiveRecordId($slug) == $record->id) ? 'timer-active-row' : '';
+        return function ($record) use ($slug) {
+            if (static::getActiveRecordId($slug) != $record->id) {
+                return '';
+            }
+            $timerState = static::getTimerState($slug, $record->id, $record);
+            $total = (int)($timerState['total_seconds'] ?? 300);
+            $remaining = (int)($timerState['remaining_seconds'] ?? $total);
+            if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
+                $elapsed = time() - $timerState['started_at'];
+                $remaining = max(0, $remaining - $elapsed);
+            }
+            $phase = ($remaining <= 0) ? 'timer-phase-red' : (($remaining <= 60) ? 'timer-phase-yellow' : 'timer-phase-green');
+            return 'timer-active-row ' . $phase;
+        };
     }
 }
