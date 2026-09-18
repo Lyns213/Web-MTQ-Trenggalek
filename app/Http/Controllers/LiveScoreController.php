@@ -256,25 +256,6 @@ class LiveScoreController extends Controller
         $records = $this->getRecords($slug);
 
         if ($id) {
-            if (request()->has('set_active')) {
-                Cache::put('mtq_live_active_' . $slug, (int)$id, 86400);
-                $liveActiveId = (int)$id;
-            } else {
-                $liveActiveId = Cache::get('mtq_live_active_' . $slug);
-            }
-        } else {
-            $liveActiveId = Cache::get('mtq_live_active_' . $slug);
-            if ($liveActiveId) {
-                $id = $liveActiveId;
-            }
-        }
-
-        if (!$id) {
-            $currentRecord = $records->first();
-            if ($currentRecord) {
-                $liveActiveId = $currentRecord->id;
-            }
-        } else {
             $currentRecord = $records->firstWhere('id', (int)$id);
             if (!$currentRecord) {
                 $model = $cfg['model'];
@@ -284,12 +265,24 @@ class LiveScoreController extends Controller
                     $currentRecord = $model::with(['peserta.utusan', 'peserta.cabang'])->where('id', $id)->first();
                 }
             }
-            if (!$currentRecord) {
+            if ($currentRecord && request()->has('set_active')) {
+                Cache::put('mtq_live_active_' . $slug, (int)$currentRecord->id, 86400);
+            }
+        } else {
+            $cachedActiveId = Cache::get('mtq_live_active_' . $slug);
+            if ($cachedActiveId) {
+                $currentRecord = $records->firstWhere('id', (int)$cachedActiveId);
+            }
+            if (empty($currentRecord)) {
                 $currentRecord = $records->first();
                 if ($currentRecord) {
-                    $liveActiveId = $currentRecord->id;
+                    Cache::put('mtq_live_active_' . $slug, (int)$currentRecord->id, 86400);
                 }
             }
+        }
+
+        if (!$currentRecord) {
+            $currentRecord = $records->first();
         }
 
         $defaultFields = [];
@@ -417,15 +410,19 @@ class LiveScoreController extends Controller
         $activeTimerId = $currentRecord->id;
         $cacheKey = 'mtq_timer_' . $slug . '_' . $activeTimerId;
         $timerState = Cache::get($cacheKey);
+        $isScored = floatval($currentRecord->total ?? 0) > 0;
 
         if (!$timerState) {
+            $remainingSeconds = $isScored ? 0 : $totalSeconds;
             $timerState = [
                 'total_seconds' => $totalSeconds,
-                'remaining_seconds' => $totalSeconds,
+                'remaining_seconds' => $remainingSeconds,
                 'is_running' => false,
                 'started_at' => null,
             ];
             Cache::put($cacheKey, $timerState, 86400);
+        } elseif ($isScored && empty($timerState['is_running']) && empty($timerState['is_reset_ready'])) {
+            $timerState['remaining_seconds'] = 0;
         }
 
         if ($timerState['is_running'] && $timerState['started_at']) {
@@ -501,7 +498,7 @@ class LiveScoreController extends Controller
                 'total' => $timerState['total_seconds'],
                 'is_running' => $timerState['is_running'],
             ],
-            'active_id' => $liveActiveId ? (int)$liveActiveId : null,
+            'active_id' => (int)$currentRecord->id,
             'total_peserta' => $records->count(),
             'participants' => $participants,
         ]);
@@ -524,14 +521,17 @@ class LiveScoreController extends Controller
         $cfg = self::$config[$slug] ?? self::$config['tartil'];
         $cacheKey = 'mtq_timer_' . $slug . '_' . $id;
         $timerState = Cache::get($cacheKey);
-
+        $modelClass = $cfg['model'] ?? null;
+        $record = $modelClass ? $modelClass::find($id) : null;
+        $isScored = ($record && floatval($record->total ?? 0) > 0);
         if (!$timerState) {
             $defaultTimer = $cfg['timer'] ?? '00:05:00';
             $parts = explode(':', $defaultTimer);
             $totalSeconds = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
+            $remainingSeconds = $isScored ? 0 : $totalSeconds;
             $timerState = [
                 'total_seconds' => $totalSeconds,
-                'remaining_seconds' => $totalSeconds,
+                'remaining_seconds' => $remainingSeconds,
                 'is_running' => false,
                 'started_at' => null,
             ];
@@ -539,11 +539,16 @@ class LiveScoreController extends Controller
         }
 
         if ($action === 'show') {
-            $calcRemaining = (int)$timerState['remaining_seconds'];
-            if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
-                $elapsed = time() - $timerState['started_at'];
-                $calcRemaining = max(0, $calcRemaining - $elapsed);
+            // Saat ganti/tampilkan peserta, timer HARUS BERHENTI, jangan pernah auto-play!
+            $timerState['is_running'] = false;
+            $timerState['started_at'] = null;
+            if ($isScored) {
+                $timerState['remaining_seconds'] = 0;
+                $timerState['is_reset_ready'] = false;
             }
+            Cache::put($cacheKey, $timerState, 86400);
+
+            $calcRemaining = (int)$timerState['remaining_seconds'];
             return new \Illuminate\Http\JsonResponse([
                 'success' => true,
                 'show' => true,
@@ -551,22 +556,27 @@ class LiveScoreController extends Controller
                 'timer' => [
                     'remaining' => $calcRemaining,
                     'total' => (int)$timerState['total_seconds'],
-                    'is_running' => (bool)$timerState['is_running'],
+                    'is_running' => false,
                 ],
             ]);
         }
 
         if ($action === 'start') {
-            if ($timerState['remaining_seconds'] <= 0) {
+            $reqRemaining = $request->input('remaining');
+            if ($reqRemaining !== null && is_numeric($reqRemaining) && (int)$reqRemaining > 0) {
+                $timerState['remaining_seconds'] = (int)$reqRemaining;
+            } elseif ($timerState['remaining_seconds'] <= 0) {
                 $timerState['remaining_seconds'] = $timerState['total_seconds'];
             }
-            if (!$timerState['is_running'] || empty($timerState['started_at'])) {
-                $timerState['started_at'] = time();
-            }
+            $timerState['started_at'] = time();
             $timerState['is_running'] = true;
+            $timerState['is_reset_ready'] = false;
             Cache::put($cacheKey, $timerState, 86400);
         } elseif ($action === 'pause') {
-            if ($timerState['is_running'] && $timerState['started_at']) {
+            $reqRemaining = $request->input('remaining');
+            if ($reqRemaining !== null && is_numeric($reqRemaining)) {
+                $timerState['remaining_seconds'] = max(0, (int)$reqRemaining);
+            } elseif ($timerState['is_running'] && !empty($timerState['started_at'])) {
                 $elapsed = time() - $timerState['started_at'];
                 $timerState['remaining_seconds'] = max(0, $timerState['remaining_seconds'] - $elapsed);
             }
@@ -577,6 +587,7 @@ class LiveScoreController extends Controller
             $timerState['is_running'] = false;
             $timerState['started_at'] = null;
             $timerState['remaining_seconds'] = $timerState['total_seconds'];
+            $timerState['is_reset_ready'] = true;
             Cache::put($cacheKey, $timerState, 86400);
         }
 

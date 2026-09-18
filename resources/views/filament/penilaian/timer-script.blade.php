@@ -16,6 +16,7 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
     font-weight: 700 !important;
     font-size: 13.5px !important;
+    color: #ffffff !important;
     box-sizing: border-box;
     letter-spacing: 0.5px;
     transition: all 0.25s ease;
@@ -27,9 +28,9 @@ tr.timer-active-row .timer-cell {
 /* 1. GREEN PHASE (> 60s) */
 .timer-cell.timer-phase-green,
 tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) .timer-cell {
-    color: #10b981 !important;
-    background: rgba(16, 185, 129, 0.16) !important;
-    border: 1.5px solid rgba(16, 185, 129, 0.6) !important;
+    color: #ffffff !important;
+    background: rgba(16, 185, 129, 0.18) !important;
+    border: 1.5px solid rgba(16, 185, 129, 0.7) !important;
     box-shadow: 0 0 10px rgba(16, 185, 129, 0.35) !important;
 }
 tr.timer-active-row.timer-phase-green,
@@ -58,9 +59,9 @@ tr.timer-active-row:not(.timer-phase-yellow):not(.timer-phase-red) > td:last-chi
 
 /* 2. YELLOW PHASE (<= 60s) */
 .timer-cell.timer-phase-yellow {
-    color: #f59e0b !important;
-    background: rgba(245, 158, 11, 0.2) !important;
-    border: 1.5px solid rgba(245, 158, 11, 0.7) !important;
+    color: #ffffff !important;
+    background: rgba(245, 158, 11, 0.25) !important;
+    border: 1.5px solid rgba(245, 158, 11, 0.8) !important;
     box-shadow: 0 0 12px rgba(245, 158, 11, 0.4) !important;
 }
 tr.timer-active-row.timer-phase-yellow {
@@ -85,9 +86,9 @@ tr.timer-active-row.timer-phase-yellow > td:last-child {
 
 /* 3. RED PHASE (<= 0s) */
 .timer-cell.timer-phase-red {
-    color: #ef4444 !important;
-    background: rgba(239, 68, 68, 0.22) !important;
-    border: 1.5px solid rgba(239, 68, 68, 0.8) !important;
+    color: #ffffff !important;
+    background: rgba(239, 68, 68, 0.25) !important;
+    border: 1.5px solid rgba(239, 68, 68, 0.85) !important;
     box-shadow: 0 0 14px rgba(239, 68, 68, 0.5) !important;
 }
 tr.timer-active-row.timer-phase-red {
@@ -114,28 +115,30 @@ tr.timer-active-row.timer-phase-red > td:last-child {
 <script>
 (function() {
     var APP_BASE = '{{ url("/") }}';
-    var audioUrls = {
+
+    var soundUrls = {
         start: '{{ asset("sounds/mtqstart.mp3") }}',
         mid: '{{ asset("sounds/mtqmid.mp3") }}',
         end: '{{ asset("sounds/mtqend.mp3") }}'
     };
 
-    var audioStart = new Audio(audioUrls.start);
-    var audioMid = new Audio(audioUrls.mid);
-    var audioEnd = new Audio(audioUrls.end);
-
-    [audioStart, audioMid, audioEnd].forEach(function(a) {
-        a.preload = 'auto';
-        try { a.load(); } catch(e) {}
+    // 1. Preload HTML5 Audio objects
+    var audioElements = {
+        start: new Audio(soundUrls.start),
+        mid: new Audio(soundUrls.mid),
+        end: new Audio(soundUrls.end)
+    };
+    Object.keys(audioElements).forEach(function(k) {
+        audioElements[k].preload = 'auto';
+        try { audioElements[k].load(); } catch(e) {}
     });
 
+    // 2. Pre-decode into Web Audio API buffers for 0ms latency playback
     var audioCtx = null;
-    function getAudioContext() {
+    function getAudioCtx() {
         if (!audioCtx) {
-            var AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (AudioContextClass) {
-                audioCtx = new AudioContextClass();
-            }
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) audioCtx = new AC();
         }
         if (audioCtx && audioCtx.state === 'suspended') {
             audioCtx.resume().catch(function() {});
@@ -143,95 +146,143 @@ tr.timer-active-row.timer-phase-red > td:last-child {
         return audioCtx;
     }
 
-    function unlockAudioSystem() {
-        getAudioContext();
-        [audioStart, audioMid, audioEnd].forEach(function(a) {
-            if (!a) return;
-            try {
-                a.muted = true;
-                var p = a.play();
-                if (p && typeof p.then === 'function') {
-                    p.then(function() {
-                        a.pause();
-                        a.currentTime = 0;
-                        a.muted = false;
-                    }).catch(function() {
-                        a.muted = false;
-                    });
-                } else {
-                    a.muted = false;
+    var soundBuffers = {};
+    function preloadSoundBuffer(type, url) {
+        fetch(url)
+            .then(function(r) { return r.arrayBuffer(); })
+            .then(function(buf) {
+                var ctx = getAudioCtx();
+                if (ctx) {
+                    ctx.decodeAudioData(buf, function(decoded) {
+                        soundBuffers[type] = decoded;
+                    }, function() {});
                 }
-            } catch(e) {
-                a.muted = false;
-            }
-        });
+            })
+            .catch(function() {});
     }
 
+    preloadSoundBuffer('start', soundUrls.start);
+    preloadSoundBuffer('mid', soundUrls.mid);
+    preloadSoundBuffer('end', soundUrls.end);
+
     ['click', 'touchstart', 'keydown', 'mousedown'].forEach(function(evt) {
-        document.addEventListener(evt, unlockAudioSystem, { once: false, passive: true });
+        document.addEventListener(evt, function() {
+            getAudioCtx();
+        }, { once: false, passive: true });
     });
 
-    function playToneBeep(count, type) {
-        try {
-            var ctx = getAudioContext();
-            if (!ctx) return;
-            var now = ctx.currentTime;
-            var freq = (type === 'start') ? 880 : ((type === 'mid') ? 784 : 587);
-            var duration = (type === 'start') ? 0.35 : ((type === 'mid') ? 0.28 : 0.4);
-            var gap = duration + 0.12;
-
-            for (var i = 0; i < count; i++) {
-                var st = now + (i * gap);
-                var osc = ctx.createOscillator();
-                var gain = ctx.createGain();
-
-                osc.type = (type === 'end') ? 'triangle' : 'sine';
-                osc.frequency.setValueAtTime(freq, st);
-                if (type === 'end') {
-                    osc.frequency.exponentialRampToValueAtTime(freq * 0.7, st + duration);
+    function playFallbackAudio(type) {
+        var a = audioElements[type];
+        if (a) {
+            try {
+                a.currentTime = 0;
+                var p = a.play();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(function(e) {
+                        try {
+                            var directAudio = new Audio(soundUrls[type]);
+                            directAudio.play().catch(function() {});
+                        } catch(err) {}
+                    });
                 }
-
-                gain.gain.setValueAtTime(0.5, st);
-                gain.gain.setValueAtTime(0.5, st + duration - 0.05);
-                gain.gain.exponentialRampToValueAtTime(0.0001, st + duration);
-
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.start(st);
-                osc.stop(st + duration);
-            }
-        } catch(e) {
-            console.warn('Tone synth error:', e);
+            } catch(e) {}
         }
     }
 
     function playBeeps(count, type) {
-        unlockAudioSystem();
-        var audio = (type === 'start') ? audioStart : ((type === 'mid') ? audioMid : audioEnd);
-        var played = false;
-
-        if (audio) {
-            try {
-                audio.currentTime = 0;
-                var p = audio.play();
-                if (p && typeof p.then === 'function') {
-                    p.then(function() {
-                        played = true;
-                    }).catch(function(err) {
-                        console.warn('Audio play blocked/failed, playing tone synth:', err);
-                        playToneBeep(count, type);
-                    });
-                } else {
-                    played = true;
+        var ctx = getAudioCtx();
+        if (ctx && soundBuffers[type]) {
+            var playBuffer = function() {
+                try {
+                    var src = ctx.createBufferSource();
+                    src.buffer = soundBuffers[type];
+                    src.connect(ctx.destination);
+                    src.start(0);
+                } catch(e) {
+                    playFallbackAudio(type);
                 }
-            } catch(e) {
-                console.warn('Audio play exception, playing tone synth:', e);
-                playToneBeep(count, type);
+            };
+
+            if (ctx.state === 'running') {
+                playBuffer();
+                return;
+            } else if (typeof ctx.resume === 'function') {
+                ctx.resume().then(playBuffer).catch(function() {
+                    playFallbackAudio(type);
+                });
+                return;
             }
-        } else {
-            playToneBeep(count, type);
         }
+
+        playFallbackAudio(type);
+    }
+
+    function getCellRecordId(cell) {
+        if (!cell) return null;
+        var rawId = cell.getAttribute('data-record-id');
+        if (rawId && !isNaN(parseInt(rawId, 10))) {
+            return parseInt(rawId, 10);
+        }
+        var row = cell.closest('tr');
+        if (row) {
+            var el = row.querySelector('[data-record-id]');
+            if (el && el.getAttribute('data-record-id')) {
+                var val = parseInt(el.getAttribute('data-record-id'), 10);
+                if (!isNaN(val)) {
+                    cell.setAttribute('data-record-id', val);
+                    return val;
+                }
+            }
+            var cellKey = cell.closest('[wire\\:key]');
+            if (cellKey) {
+                var k = cellKey.getAttribute('wire:key') || '';
+                var m = k.match(/\.record\.(\d+)\./);
+                if (m && m[1]) {
+                    var val2 = parseInt(m[1], 10);
+                    cell.setAttribute('data-record-id', val2);
+                    return val2;
+                }
+            }
+        }
+        return null;
+    }
+
+    function getPageSlug() {
+        var path = (window.location.pathname || '').toLowerCase();
+        if (path.indexOf('nilai-anaks') !== -1) return 'anak';
+        if (path.indexOf('nilai-dekorasis') !== -1) return 'dekorasi';
+        if (path.indexOf('nilai-dewasas') !== -1) return 'dewasa';
+        if (path.indexOf('nilai-duapuluh-juzs') !== -1) return 'duapuluhjuz';
+        if (path.indexOf('nilai-kontemporers') !== -1) return 'kontemporer';
+        if (path.indexOf('nilai-lima-juzs') !== -1) return 'limajuz';
+        if (path.indexOf('nilai-mfqs') !== -1) return 'mfq';
+        if (path.indexOf('nilai-mmqs') !== -1) return 'mmq';
+        if (path.indexOf('nilai-msqs') !== -1) return 'msq';
+        if (path.indexOf('nilai-mushafs') !== -1) return 'mushaf';
+        if (path.indexOf('nilai-naskahs') !== -1) return 'naskah';
+        if (path.indexOf('nilai-remajas') !== -1) return 'remaja';
+        if (path.indexOf('nilai-satu-juzs') !== -1) return 'satujuz';
+        if (path.indexOf('nilai-sepuluh-juzs') !== -1) return 'sepuluhjuz';
+        if (path.indexOf('nilai-tartils') !== -1) return 'tartil';
+        if (path.indexOf('nilai-tigapuluh-juzs') !== -1) return 'tigapuluhjuz';
+        return 'tartil';
+    }
+
+    function getCellSlug(cell) {
+        if (cell) {
+            var s = cell.getAttribute('data-slug');
+            if (s) return s;
+            var row = cell.closest('tr');
+            if (row) {
+                var el = row.querySelector('[data-slug]');
+                if (el && el.getAttribute('data-slug')) {
+                    var sVal = el.getAttribute('data-slug');
+                    cell.setAttribute('data-slug', sVal);
+                    return sVal;
+                }
+            }
+        }
+        return getPageSlug();
     }
 
     function updateRowAndCellPhase(cell, rem) {
@@ -242,9 +293,11 @@ tr.timer-active-row.timer-phase-red > td:last-child {
         cell.classList.remove('timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
         cell.classList.add(phase);
 
-        if (row && row.classList.contains('timer-active-row')) {
+        if (row) {
             row.classList.remove('timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
-            row.classList.add(phase);
+            if (row.classList.contains('timer-active-row')) {
+                row.classList.add(phase);
+            }
         }
     }
 
@@ -265,13 +318,14 @@ tr.timer-active-row.timer-phase-red > td:last-child {
         if (target) target.textContent = text;
     }
 
-    function broadcastTimerSync(action, slug, recordId, remaining, total) {
+    function broadcastTimerSync(action, slug, recordId, remaining, total, scores) {
         var payload = {
             slug: slug || 'tartil',
             action: action,
             recordId: recordId ? parseInt(recordId, 10) : null,
             remaining: remaining,
             total: total,
+            scores: scores || null,
             isRunning: (action === 'start'),
             timestamp: Date.now()
         };
@@ -366,30 +420,24 @@ tr.timer-active-row.timer-phase-red > td:last-child {
         btn.setAttribute('title', 'Mulai Waktu');
     }
 
-    function setBtnToShow(btn) {
-        if (!btn) return;
-        var path = btn.querySelector('svg path');
-        if (path) path.setAttribute('d', 'M6 20.25h12m-7.5-3v3m3-3v3m-10.125-3h17.25c.621 0 1.125-.504 1.125-1.125V4.875c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z');
-        btn.classList.remove('fi-color-gray', 'fi-btn-color-gray');
-        btn.classList.add('fi-color-info', 'fi-btn-color-info');
-        btn.style.setProperty('--c-400', 'var(--info-400)');
-        btn.style.setProperty('--c-500', 'var(--info-500)');
-        btn.style.setProperty('--c-600', 'var(--info-600)');
-        btn.setAttribute('data-is-active', '0');
-        btn.setAttribute('title', 'Tampilkan Peserta');
-    }
-
-    function setBtnToUnshow(btn) {
-        if (!btn) return;
-        var path = btn.querySelector('svg path');
-        if (path) path.setAttribute('d', 'M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88');
-        btn.classList.remove('fi-color-info', 'fi-btn-color-info');
-        btn.classList.add('fi-color-gray', 'fi-btn-color-gray');
-        btn.style.setProperty('--c-400', 'var(--gray-400)');
-        btn.style.setProperty('--c-500', 'var(--gray-500)');
-        btn.style.setProperty('--c-600', 'var(--gray-600)');
-        btn.setAttribute('data-is-active', '1');
-        btn.setAttribute('title', 'Sembunyikan Peserta');
+    function updateShowLiveButtons(activeRecordId) {
+        document.querySelectorAll('.btn-show-live, .btn-toggle-show-live').forEach(function(b) {
+            var rid = parseInt(b.getAttribute('data-record-id'), 10);
+            if (rid === activeRecordId) {
+                b.classList.remove('fi-color-info', 'fi-btn-color-info');
+                b.classList.add('fi-color-warning', 'fi-btn-color-warning');
+                b.style.setProperty('--c-400', 'var(--warning-400)');
+                b.style.setProperty('--c-500', 'var(--warning-500)');
+                b.style.setProperty('--c-600', 'var(--warning-600)');
+            } else {
+                b.classList.remove('fi-color-warning', 'fi-btn-color-warning');
+                b.classList.add('fi-color-info', 'fi-btn-color-info');
+                b.style.setProperty('--c-400', 'var(--info-400)');
+                b.style.setProperty('--c-500', 'var(--info-500)');
+                b.style.setProperty('--c-600', 'var(--info-600)');
+            }
+            b.setAttribute('title', 'Tampilkan Peserta');
+        });
     }
 
     var lastLocalActionAt = 0;
@@ -410,64 +458,58 @@ tr.timer-active-row.timer-phase-red > td:last-child {
     // 2. TOGGLE TIMER (MULAI / JEDA WAKTU)
     window.mtqToggleTimer = function(slug, recordId, btn) {
         lastLocalActionAt = Date.now();
-        var row = btn ? btn.closest('tr') : null;
+        recordId = parseInt(recordId, 10);
+        var row = btn ? btn.closest('tr') : document.querySelector('[data-record-id="' + recordId + '"]')?.closest('tr');
         var cell = row ? row.querySelector('.timer-cell') : document.querySelector('.timer-cell[data-record-id="' + recordId + '"]');
-
-        // Only show timer on this row, hide all others
-        if (cell) {
-            cell.style.display = 'inline-flex';
-        }
-        document.querySelectorAll('.timer-cell').forEach(function(c) {
-            if (c !== cell) c.style.display = 'none';
-        });
-
-        // Ensure this row is marked active and others are deactivated
-        if (row) {
-            document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
-                if (r !== row) r.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
-            });
-            row.classList.add('timer-active-row');
-
-            var showBtn = row.querySelector('.btn-toggle-show-live');
-            if (showBtn) {
-                document.querySelectorAll('.btn-toggle-show-live').forEach(function(b) {
-                    if (b !== showBtn) setBtnToShow(b);
-                });
-                setBtnToUnshow(showBtn);
-            }
-        }
 
         var isRunning = cell ? cell.getAttribute('data-is-running') === '1' : false;
         var rem = parseInt(cell ? cell.getAttribute('data-remaining') : '300', 10);
         var total = parseInt(cell ? cell.getAttribute('data-total-seconds') : '300', 10) || 300;
         if (isNaN(rem) || rem <= 0) rem = total;
 
-        if (cell) {
-            updateRowAndCellPhase(cell, rem);
-        }
-
         if (!isRunning) {
-            if (rem > 60) {
+            // PLAY AUDIO & VISUAL INSTANTLY (0ms latency!)
+            playBeeps(1, 'start');
+            setBtnToPause(btn);
+            showNotification('Timer dimulai', 'success');
+
+            // Only show timer on this row, hide all others
+            if (cell) {
+                cell.style.display = 'inline-flex';
+                cell.setAttribute('data-is-running', '1');
+                cell.setAttribute('data-remaining', rem);
+                var format = cell.getAttribute('data-format') || 'ms';
+                updateCellText(cell, formatTime(rem, format));
+                updateRowAndCellPhase(cell, rem);
+            }
+            document.querySelectorAll('.timer-cell').forEach(function(c) {
+                if (c !== cell) {
+                    c.style.display = 'none';
+                    c.setAttribute('data-is-running', '0');
+                }
+            });
+
+            if (row) {
+                document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
+                    if (r !== row) r.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
+                });
+                row.classList.add('timer-active-row');
+                updateShowLiveButtons(recordId);
+            }
+
+            if (rem >= 60) {
                 playedMidMap[recordId] = false;
                 playedEndMap[recordId] = false;
             } else if (rem > 0) {
                 playedEndMap[recordId] = false;
             }
-            if (cell) {
-                cell.setAttribute('data-is-running', '1');
-                cell.setAttribute('data-remaining', rem);
-                updateCellText(cell, formatTime(rem, cell.getAttribute('data-format') || 'ms'));
-                updateRowAndCellPhase(cell, rem);
-            }
-            // Reset other toggle buttons
+
             document.querySelectorAll('.btn-toggle-timer').forEach(function(b) {
                 if (b !== btn) setBtnToPlay(b);
             });
-            setBtnToPause(btn);
-            playBeeps(1, 'start');
-            showNotification('Timer dimulai', 'success');
+
             broadcastTimerSync('start', slug, recordId, rem, total);
-            fetch(APP_BASE + '/live/' + slug + '/timer/start?id=' + recordId);
+            fetch(APP_BASE + '/live/' + slug + '/timer/start?id=' + recordId + '&remaining=' + rem);
         } else {
             if (cell) {
                 cell.setAttribute('data-is-running', '0');
@@ -476,7 +518,7 @@ tr.timer-active-row.timer-phase-red > td:last-child {
             setBtnToPlay(btn);
             showNotification('Timer dijeda', 'warning');
             broadcastTimerSync('pause', slug, recordId, rem, total);
-            fetch(APP_BASE + '/live/' + slug + '/timer/pause?id=' + recordId);
+            fetch(APP_BASE + '/live/' + slug + '/timer/pause?id=' + recordId + '&remaining=' + rem);
         }
     };
 
@@ -505,79 +547,64 @@ tr.timer-active-row.timer-phase-red > td:last-child {
 
         showNotification('Timer direset', 'danger');
         broadcastTimerSync('reset', slug, recordId, total, total);
-        fetch(APP_BASE + '/live/' + slug + '/timer/reset?id=' + recordId);
+        fetch(APP_BASE + '/live/' + slug + '/timer/reset?id=' + recordId + '&remaining=' + total);
     };
 
-    // 4. TOGGLE SHOW LIVE (TAMPILKAN / SEMBUNYIKAN PESERTA)
-    window.mtqToggleShowLive = function(slug, recordId, btn) {
+    // 4. SHOW LIVE (TAMPILKAN PESERTA KE LAYAR LIVE)
+    window.mtqShowLive = function(slug, recordId, btn) {
         lastLocalActionAt = Date.now();
-        var row = btn ? btn.closest('tr') : null;
-        var isActive = btn.getAttribute('data-is-active') === '1';
+        recordId = parseInt(recordId, 10);
+        var row = btn ? btn.closest('tr') : document.querySelector('[data-record-id="' + recordId + '"]')?.closest('tr');
         var cell = row ? row.querySelector('.timer-cell') : document.querySelector('.timer-cell[data-record-id="' + recordId + '"]');
 
-        if (isActive) {
-            setBtnToShow(btn);
-            if (row) {
-                row.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
-                var toggleBtn = row.querySelector('.btn-toggle-timer');
-                if (toggleBtn) setBtnToPlay(toggleBtn);
+        // Reset all other rows and cells
+        document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
+            if (r !== row) r.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
+        });
+        document.querySelectorAll('.timer-cell').forEach(function(c) {
+            if (c !== cell) {
+                c.style.display = 'none';
+                c.setAttribute('data-is-running', '0');
             }
-            if (cell) {
-                cell.style.display = 'none';
-                cell.setAttribute('data-is-running', '0');
-            }
-            showNotification('Peserta disembunyikan dari live score', 'warning');
-            broadcastTimerSync('unshow_participant', slug, null, 0, 0);
-            fetch(APP_BASE + '/live/' + slug + '/timer/unshow?id=' + recordId);
-        } else {
-            // Reset other buttons, rows, and cells
-            document.querySelectorAll('.btn-toggle-show-live').forEach(function(b) {
-                if (b !== btn) setBtnToShow(b);
-            });
-            document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
-                if (r !== row) r.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
-            });
-            document.querySelectorAll('.timer-cell').forEach(function(c) {
-                if (c !== cell) {
-                    c.style.display = 'none';
-                    c.setAttribute('data-is-running', '0');
-                }
-            });
+        });
 
-            setBtnToUnshow(btn);
-            if (row) row.classList.add('timer-active-row');
+        // Set this row active
+        if (row) row.classList.add('timer-active-row');
+        updateShowLiveButtons(recordId);
 
-            // Move & show timer ONLY on this row
-            if (cell) {
-                cell.style.display = 'inline-flex';
-                var rem = parseInt(cell.getAttribute('data-remaining') || '300', 10);
-                var format = cell.getAttribute('data-format') || 'ms';
-                updateCellText(cell, formatTime(rem, format));
-                updateRowAndCellPhase(cell, rem);
-            }
-
-            showNotification('Peserta ditampilkan di live score', 'success');
-            broadcastTimerSync('show_participant', slug, recordId, 0, 0);
-            fetch(APP_BASE + '/live/' + slug + '/timer/show?id=' + recordId)
-                .then(function(res) { return res.json(); })
-                .then(function(data) {
-                    if (data && data.timer && cell) {
-                        cell.setAttribute('data-remaining', data.timer.remaining);
-                        cell.setAttribute('data-total-seconds', data.timer.total);
-                        cell.setAttribute('data-is-running', data.timer.is_running ? '1' : '0');
-                        var format = cell.getAttribute('data-format') || 'ms';
-                        updateCellText(cell, formatTime(data.timer.remaining, format));
-                        updateRowAndCellPhase(cell, data.timer.remaining);
-                        var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
-                        if (toggleBtn) {
-                            if (data.timer.is_running) setBtnToPause(toggleBtn);
-                            else setBtnToPlay(toggleBtn);
-                        }
-                    }
-                })
-                .catch(function() {});
+        // Move & show timer ONLY on this row (STOPPED by default!)
+        if (cell) {
+            cell.style.display = 'inline-flex';
+            cell.setAttribute('data-is-running', '0');
+            var rem = parseInt(cell.getAttribute('data-remaining') || '300', 10);
+            var format = cell.getAttribute('data-format') || 'ms';
+            updateCellText(cell, formatTime(rem, format));
+            updateRowAndCellPhase(cell, rem);
         }
+
+        // Ensure toggle timer button is in Play state
+        if (row) {
+            var toggleBtn = row.querySelector('.btn-toggle-timer');
+            if (toggleBtn) setBtnToPlay(toggleBtn);
+        }
+
+        showNotification('Peserta ditampilkan di live score', 'success');
+        broadcastTimerSync('show_participant', slug, recordId, 0, 0);
+        fetch(APP_BASE + '/live/' + slug + '/timer/show?id=' + recordId)
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data && data.timer && cell) {
+                    cell.setAttribute('data-remaining', data.timer.remaining);
+                    cell.setAttribute('data-total-seconds', data.timer.total);
+                    cell.setAttribute('data-is-running', '0');
+                    var format = cell.getAttribute('data-format') || 'ms';
+                    updateCellText(cell, formatTime(data.timer.remaining, format));
+                    updateRowAndCellPhase(cell, data.timer.remaining);
+                }
+            })
+            .catch(function() {});
     };
+    window.mtqToggleShowLive = window.mtqShowLive; // backward compatibility
 
     // =========================================================================
     // 5. ULTRA-FAST INSTANT INPUT NILAI MODAL FOR ALL CABANG (0ms OPEN, 0ms BATAL, FAST SAVE)
@@ -744,7 +771,9 @@ tr.timer-active-row.timer-phase-red > td:last-child {
         currentEditRecord.nama = nama || '';
 
         var scores = {};
-        if (scoresOrTajwid && typeof scoresOrTajwid === 'object') {
+        if (window.mtqSavedScores && window.mtqSavedScores[recordId]) {
+            scores = Object.assign({}, window.mtqSavedScores[recordId]);
+        } else if (scoresOrTajwid && typeof scoresOrTajwid === 'object') {
             scores = scoresOrTajwid;
         } else {
             scores = {
@@ -832,10 +861,12 @@ tr.timer-active-row.timer-phase-red > td:last-child {
 
         var fields = document.querySelectorAll('.mtq-dynamic-field');
         var total = 0;
+        var scoreMap = {};
         fields.forEach(function(inp) {
             var key = inp.getAttribute('data-key');
             var val = parseFloat(inp.value) || 0;
             payload.append(key, val);
+            scoreMap[key] = val;
             total += val;
         });
 
@@ -843,19 +874,51 @@ tr.timer-active-row.timer-phase-red > td:last-child {
         window.mtqCloseInputNilai();
         showNotification('Nilai berhasil disimpan', 'success');
 
-        // 2. Instant optimistic DOM update for total in table
-        var row = document.querySelector('tr.timer-active-row') || document.querySelector('[data-record-id="' + recordId + '"]')?.closest('tr');
-        if (row) {
-            var cells = row.querySelectorAll('td');
-            cells.forEach(function(cell) {
-                if (cell.classList.contains('fi-ta-col-total')) {
-                    updateCellText(cell, total.toFixed(2));
+        // Store saved scores so next modal open has latest values
+        if (!window.mtqSavedScores) window.mtqSavedScores = {};
+        scoreMap.total = total;
+        window.mtqSavedScores[recordId] = scoreMap;
+
+        // 2. Instant optimistic DOM update for table row
+        var targetRow = document.querySelector('.btn-input-nilai[data-record-id="' + recordId + '"]')?.closest('tr')
+            || document.querySelector('[data-record-id="' + recordId + '"]')?.closest('tr')
+            || document.querySelector('tr.timer-active-row');
+
+        if (targetRow) {
+            // Update individual subscore cells
+            Object.keys(scoreMap).forEach(function(k) {
+                var kebabK = k.replace(/_/g, '-');
+                var cell = targetRow.querySelector('.fi-table-cell-' + kebabK)
+                    || targetRow.querySelector('[wire\\:key*="column.' + k + '"]')
+                    || targetRow.querySelector('[wire\\:key*="column.' + kebabK + '"]');
+                if (cell) {
+                    updateCellText(cell, parseFloat(scoreMap[k]).toFixed(2));
                 }
             });
+
+            // Update total cell
+            var totalCell = targetRow.querySelector('.fi-table-cell-total')
+                || targetRow.querySelector('[wire\\:key*="column.total"]')
+                || targetRow.querySelector('.fi-ta-col-total');
+            if (totalCell) {
+                updateCellText(totalCell, total.toFixed(2));
+            }
+
+            // Update inputNilai button icon & color from green plus to blue eye (Lihat/Edit)
+            var inputBtn = targetRow.querySelector('.btn-input-nilai[data-record-id="' + recordId + '"]');
+            if (inputBtn && total > 0) {
+                inputBtn.setAttribute('title', 'Lihat / Edit Nilai');
+                inputBtn.classList.remove('fi-color-success', 'fi-btn-color-success');
+                inputBtn.classList.add('fi-color-info', 'fi-btn-color-info');
+                var path = inputBtn.querySelector('svg path');
+                if (path) {
+                    path.setAttribute('d', 'M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z');
+                }
+            }
         }
 
-        // 3. Broadcast to live screen
-        broadcastTimerSync('score_saved', slug, recordId, 0, 0);
+        // 3. Broadcast to live screen (Do NOT force timer to 0! Send total and scoreMap)
+        broadcastTimerSync('score_saved', slug, recordId, total, 0, scoreMap);
 
         // 4. Background save
         fetch(APP_BASE + '/simpan-nilai/' + slug, {
@@ -868,13 +931,24 @@ tr.timer-active-row.timer-phase-red > td:last-child {
         })
         .then(function(res) { return res.json(); })
         .then(function(data) {
-            if (data && data.total !== undefined && row) {
-                var cells = row.querySelectorAll('td');
-                cells.forEach(function(cell) {
-                    if (cell.classList.contains('fi-ta-col-total')) {
-                        updateCellText(cell, Number(data.total).toFixed(2));
-                    }
-                });
+            if (data && data.total !== undefined && targetRow) {
+                var totalCell = targetRow.querySelector('.fi-table-cell-total')
+                    || targetRow.querySelector('[wire\\:key*="column.total"]')
+                    || targetRow.querySelector('.fi-ta-col-total');
+                if (totalCell) {
+                    updateCellText(totalCell, Number(data.total).toFixed(2));
+                }
+                if (data.fields) {
+                    Object.keys(data.fields).forEach(function(k) {
+                        var kebabK = k.replace(/_/g, '-');
+                        var cell = targetRow.querySelector('.fi-table-cell-' + kebabK)
+                            || targetRow.querySelector('[wire\\:key*="column.' + k + '"]')
+                            || targetRow.querySelector('[wire\\:key*="column.' + kebabK + '"]');
+                        if (cell) {
+                            updateCellText(cell, Number(data.fields[k]).toFixed(2));
+                        }
+                    });
+                }
             }
         })
         .catch(function(err) {
@@ -891,10 +965,12 @@ tr.timer-active-row.timer-phase-red > td:last-child {
 
     // 6. Real-time Countdown: Ticks down every 1000ms
     setInterval(function() {
-        var cells = document.querySelectorAll('.timer-cell[data-is-running="1"]');
+        var cells = document.querySelectorAll('.timer-cell');
         cells.forEach(function(cell) {
+            var isRunning = (cell.getAttribute('data-is-running') === '1');
+            if (!isRunning) return;
             var rem = parseInt(cell.getAttribute('data-remaining'), 10);
-            var recordId = cell.getAttribute('data-record-id');
+            var recordId = getCellRecordId(cell);
             if (isNaN(rem)) return;
 
             if (rem > 0) {
@@ -947,61 +1023,7 @@ tr.timer-active-row.timer-phase-red > td:last-child {
         });
     }, 1000);
 
-    // 7. Background Sync: Poll timer status from server every 1000ms
-    setInterval(function() {
-        if (Date.now() - lastLocalActionAt < 4000) {
-            return;
-        }
-
-        fetch(APP_BASE + '/mtq-timer-status')
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-                if (!data || !data.timers) return;
-                var cells = document.querySelectorAll('.timer-cell');
-                cells.forEach(function(cell) {
-                    var slug = cell.getAttribute('data-slug') || 'tartil';
-                    var recordId = parseInt(cell.getAttribute('data-record-id'), 10);
-                    var tInfo = data.timers[slug];
-                    var row = cell.closest('tr');
-
-                    if (tInfo && tInfo.record_id && tInfo.record_id === recordId) {
-                        cell.style.display = 'inline-flex';
-                        cell.setAttribute('data-is-running', tInfo.is_running ? '1' : '0');
-                        var localRem = parseInt(cell.getAttribute('data-remaining'), 10);
-                        if (isNaN(localRem) || Math.abs(localRem - tInfo.remaining) > 2) {
-                            cell.setAttribute('data-remaining', tInfo.remaining);
-                            var format = cell.getAttribute('data-format') || 'ms';
-                            updateCellText(cell, formatTime(tInfo.remaining, format));
-                            localRem = tInfo.remaining;
-                        }
-                        updateRowAndCellPhase(cell, localRem);
-                        if (row) {
-                            row.classList.add('timer-active-row');
-                            var toggleBtn = row.querySelector('.btn-toggle-timer');
-                            if (toggleBtn) {
-                                if (tInfo.is_running) setBtnToPause(toggleBtn);
-                                else setBtnToPlay(toggleBtn);
-                            }
-                            var showBtn = row.querySelector('.btn-toggle-show-live');
-                            if (showBtn) setBtnToUnshow(showBtn);
-                        }
-                    } else {
-                        cell.style.display = 'none';
-                        cell.setAttribute('data-is-running', '0');
-                        if (row) {
-                            row.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
-                            var showBtn = row.querySelector('.btn-toggle-show-live');
-                            if (showBtn) setBtnToShow(showBtn);
-                            var toggleBtn = row.querySelector('.btn-toggle-timer');
-                            if (toggleBtn) setBtnToPlay(toggleBtn);
-                        }
-                    }
-                });
-            })
-            .catch(function() {});
-    }, 1000);
-
-    // 8. Instant Cross-Tab / Cross-Window Broadcast Listener
+    // 7. Instant Cross-Tab / Cross-Window Broadcast Listener
     try {
         if (window.BroadcastChannel) {
             var bcListen = new BroadcastChannel('mtq_timer_channel');
@@ -1010,16 +1032,14 @@ tr.timer-active-row.timer-phase-red > td:last-child {
                 if (!ev) return;
                 var cells = document.querySelectorAll('.timer-cell');
                 cells.forEach(function(cell) {
-                    var slug = cell.getAttribute('data-slug') || 'tartil';
+                    var slug = getCellSlug(cell);
                     if (slug !== ev.slug) return;
-                    var recordId = parseInt(cell.getAttribute('data-record-id'), 10);
+                    var recordId = getCellRecordId(cell);
                     var row = cell.closest('tr');
 
-                    if (ev.recordId && ev.recordId === recordId) {
+                    if (ev.recordId && recordId && ev.recordId === recordId) {
                         cell.style.display = 'inline-flex';
                         if (row) row.classList.add('timer-active-row');
-                        var showBtn = row ? row.querySelector('.btn-toggle-show-live') : null;
-                        if (showBtn) setBtnToUnshow(showBtn);
 
                         if (ev.action === 'start') {
                             cell.setAttribute('data-is-running', '1');
@@ -1049,30 +1069,46 @@ tr.timer-active-row.timer-phase-red > td:last-child {
                             var toggleBtn = row ? row.querySelector('.btn-toggle-timer') : null;
                             if (toggleBtn) setBtnToPlay(toggleBtn);
                         }
-                    } else if (ev.recordId && ev.recordId !== recordId) {
+                    } else if (ev.recordId && recordId && ev.recordId !== recordId) {
                         cell.style.display = 'none';
                         cell.setAttribute('data-is-running', '0');
                         if (row) {
                             row.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
-                            var showBtn = row.querySelector('.btn-toggle-show-live');
-                            if (showBtn) setBtnToShow(showBtn);
-                            var toggleBtn = row.querySelector('.btn-toggle-timer');
-                            if (toggleBtn) setBtnToPlay(toggleBtn);
-                        }
-                    } else if (ev.action === 'unshow_participant') {
-                        cell.style.display = 'none';
-                        cell.setAttribute('data-is-running', '0');
-                        if (row) {
-                            row.classList.remove('timer-active-row', 'timer-phase-green', 'timer-phase-yellow', 'timer-phase-red');
-                            var showBtn = row.querySelector('.btn-toggle-show-live');
-                            if (showBtn) setBtnToShow(showBtn);
                             var toggleBtn = row.querySelector('.btn-toggle-timer');
                             if (toggleBtn) setBtnToPlay(toggleBtn);
                         }
                     }
                 });
+                if (ev.recordId) {
+                    updateShowLiveButtons(ev.recordId);
+                }
             };
         }
     } catch(e) {}
+
+    function initTimerCells() {
+        document.querySelectorAll('.timer-cell').forEach(function(cell) {
+            var rid = getCellRecordId(cell);
+            var slug = getCellSlug(cell);
+            if (rid) cell.setAttribute('data-record-id', rid);
+            if (slug) cell.setAttribute('data-slug', slug);
+            if (!cell.getAttribute('data-format')) cell.setAttribute('data-format', 'ms');
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTimerCells);
+    } else {
+        initTimerCells();
+    }
+    document.addEventListener('livewire:navigated', initTimerCells);
+    document.addEventListener('livewire:initialized', function() {
+        initTimerCells();
+        if (window.Livewire && window.Livewire.hook) {
+            window.Livewire.hook('morph.updated', function() {
+                initTimerCells();
+            });
+        }
+    });
 })();
 </script>

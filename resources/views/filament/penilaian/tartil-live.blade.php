@@ -897,108 +897,106 @@ let isPaused = false;
 let autoScrollTimer = null;
 let lastActiveId = null;
 
-// Audio System with original MTQ MP3 files
-var audioStart = new Audio('{{ asset("sounds/mtqstart.mp3") }}');
-var audioMid = new Audio('{{ asset("sounds/mtqmid.mp3") }}');
-var audioEnd = new Audio('{{ asset("sounds/mtqend.mp3") }}');
-
-var audioCtx = null;
-function getAudioContext() {
-    if (!audioCtx) {
-        var AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioContextClass) {
-            audioCtx = new AudioContextClass();
-        }
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(function() {});
-    }
-    return audioCtx;
-}
-
-function unlockAudioSystem() {
-    getAudioContext();
-    [audioStart, audioMid, audioEnd].forEach(function(a) {
-        if (!a) return;
-        try {
-            a.muted = true;
-            var p = a.play();
-            if (p && typeof p.then === 'function') {
-                p.then(function() {
-                    a.pause();
-                    a.currentTime = 0;
-                    a.muted = false;
-                }).catch(function() {
-                    a.muted = false;
-                });
-            } else {
-                a.muted = false;
-            }
-        } catch(e) {
-            a.muted = false;
-        }
-    });
-}
-
-['click', 'touchstart', 'keydown', 'mousedown'].forEach(function(evt) {
-    document.addEventListener(evt, unlockAudioSystem, { once: false, passive: true });
-});
-
-function playToneBeep(count, type) {
-    try {
-        var ctx = getAudioContext();
-        if (!ctx) return;
-        var now = ctx.currentTime;
-        var freq = (type === 'start') ? 880 : ((type === 'mid') ? 784 : 587);
-        var duration = (type === 'start') ? 0.35 : ((type === 'mid') ? 0.28 : 0.4);
-        var gap = duration + 0.12;
-
-        for (var i = 0; i < count; i++) {
-            var st = now + (i * gap);
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-
-            osc.type = (type === 'end') ? 'triangle' : 'sine';
-            osc.frequency.setValueAtTime(freq, st);
-            if (type === 'end') {
-                osc.frequency.exponentialRampToValueAtTime(freq * 0.7, st + duration);
-            }
-
-            gain.gain.setValueAtTime(0.5, st);
-            gain.gain.setValueAtTime(0.5, st + duration - 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.0001, st + duration);
-
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            osc.start(st);
-            osc.stop(st + duration);
-        }
-    } catch(e) {}
-}
-
+// Audio System with original MTQ MP3 files (0ms Instant Preload)
 let playedMidSound = timerSeconds <= 60 && timerSeconds > 0;
 let playedEndSound = timerSeconds <= 0;
 
-function playBeeps(count, type) {
-    unlockAudioSystem();
-    var audio = type === 'start' ? audioStart : (type === 'mid' ? audioMid : audioEnd);
-    if (audio) {
+var liveSoundUrls = {
+    start: '{{ asset("sounds/mtqstart.mp3") }}',
+    mid: '{{ asset("sounds/mtqmid.mp3") }}',
+    end: '{{ asset("sounds/mtqend.mp3") }}'
+};
+
+var liveAudioElements = {
+    start: new Audio(liveSoundUrls.start),
+    mid: new Audio(liveSoundUrls.mid),
+    end: new Audio(liveSoundUrls.end)
+};
+Object.keys(liveAudioElements).forEach(function(k) {
+    liveAudioElements[k].preload = 'auto';
+    try { liveAudioElements[k].load(); } catch(e) {}
+});
+
+var liveAudioCtx = null;
+function getLiveAudioCtx() {
+    if (!liveAudioCtx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) liveAudioCtx = new AC();
+    }
+    if (liveAudioCtx && liveAudioCtx.state === 'suspended') {
+        liveAudioCtx.resume().catch(function() {});
+    }
+    return liveAudioCtx;
+}
+
+var liveSoundBuffers = {};
+function preloadLiveSoundBuffer(type, url) {
+    fetch(url)
+        .then(function(r) { return r.arrayBuffer(); })
+        .then(function(buf) {
+            var ctx = getLiveAudioCtx();
+            if (ctx) {
+                ctx.decodeAudioData(buf, function(decoded) {
+                    liveSoundBuffers[type] = decoded;
+                }, function() {});
+            }
+        })
+        .catch(function() {});
+}
+preloadLiveSoundBuffer('start', liveSoundUrls.start);
+preloadLiveSoundBuffer('mid', liveSoundUrls.mid);
+preloadLiveSoundBuffer('end', liveSoundUrls.end);
+
+['click', 'touchstart', 'keydown', 'mousedown'].forEach(function(evt) {
+    document.addEventListener(evt, function() {
+        getLiveAudioCtx();
+    }, { once: false, passive: true });
+});
+
+function playFallbackAudio(type) {
+    var a = liveAudioElements[type];
+    if (a) {
         try {
-            audio.currentTime = 0;
-            var p = audio.play();
-            if (p && typeof p.then === 'function') {
-                p.then(function() {
-                }).catch(function(e) {
-                    playToneBeep(count, type);
+            a.currentTime = 0;
+            var p = a.play();
+            if (p && typeof p.catch === 'function') {
+                p.catch(function(e) {
+                    try {
+                        var directAudio = new Audio(liveSoundUrls[type]);
+                        directAudio.play().catch(function() {});
+                    } catch(err) {}
                 });
             }
-        } catch(e) {
-            playToneBeep(count, type);
-        }
-    } else {
-        playToneBeep(count, type);
+        } catch(e) {}
     }
+}
+
+function playBeeps(count, type) {
+    var ctx = getLiveAudioCtx();
+    if (ctx && liveSoundBuffers[type]) {
+        var playBuffer = function() {
+            try {
+                var src = ctx.createBufferSource();
+                src.buffer = liveSoundBuffers[type];
+                src.connect(ctx.destination);
+                src.start(0);
+            } catch(e) {
+                playFallbackAudio(type);
+            }
+        };
+
+        if (ctx.state === 'running') {
+            playBuffer();
+            return;
+        } else if (typeof ctx.resume === 'function') {
+            ctx.resume().then(playBuffer).catch(function() {
+                playFallbackAudio(type);
+            });
+            return;
+        }
+    }
+
+    playFallbackAudio(type);
 }
 
 function showLiveToast(msg) {
@@ -1039,33 +1037,53 @@ let pollTimer = null;
 function handleDirectSync(ev) {
     if (!ev || ev.slug !== currentSlug) return;
 
-    if (ev.recordId && currentId && ev.recordId !== currentId) {
-        switchToParticipant(ev.recordId);
+    if (ev.action === 'show_participant' || (ev.recordId && currentId && Number(ev.recordId) !== Number(currentId))) {
+        if (ev.recordId) {
+            switchToParticipant(Number(ev.recordId));
+        }
+        return;
     }
 
     if (ev.action === 'start') {
         lastLocalActionAt = Date.now();
+        playBeeps(1, 'start');
+        var targetRem = (ev.remaining !== undefined && ev.remaining !== null && Number(ev.remaining) > 0)
+            ? Number(ev.remaining)
+            : totalTimerSeconds;
         isTimerRunning = true;
-        timerSeconds = ev.remaining || totalTimerSeconds;
+        timerSeconds = targetRem;
         timerInitialAtStart = timerSeconds;
         timerStartedAt = Date.now();
+        if (timerSeconds > 60) playedMidSound = false;
+        if (timerSeconds > 0) playedEndSound = false;
         updateTimerDisplay(timerSeconds, true);
-        playBeeps(1, 'start');
     } else if (ev.action === 'pause') {
         lastLocalActionAt = Date.now();
         isTimerRunning = false;
-        timerSeconds = ev.remaining !== undefined ? ev.remaining : timerSeconds;
+        timerSeconds = ev.remaining !== undefined ? Number(ev.remaining) : getRemainingSeconds();
         timerInitialAtStart = timerSeconds;
         updateTimerDisplay(timerSeconds, false);
     } else if (ev.action === 'reset') {
         lastLocalActionAt = Date.now();
         isTimerRunning = false;
-        timerSeconds = ev.total || totalTimerSeconds;
+        timerSeconds = Number(ev.total || totalTimerSeconds);
         timerInitialAtStart = timerSeconds;
         playedMidSound = false;
         playedEndSound = false;
-        updateTimerDisplay(totalTimerSeconds, false);
+        updateTimerDisplay(timerSeconds, false);
     } else if (ev.action === 'score_saved') {
+        if (ev.recordId) {
+            var targetP = (allParticipantsData || []).find(function(p) { return Number(p.id) === Number(ev.recordId); });
+            if (targetP && ev.remaining !== undefined) {
+                targetP.total = Number(ev.remaining || 0);
+            }
+        }
+        if (ev.recordId && currentId && Number(ev.recordId) === Number(currentId)) {
+            var sTotalEl = document.getElementById('sTotal');
+            if (sTotalEl && ev.remaining !== undefined) {
+                sTotalEl.textContent = Number(ev.remaining || 0).toFixed(2);
+            }
+        }
         fetchData(currentId);
     }
 }
@@ -1084,6 +1102,11 @@ window.addEventListener('storage', function(e) {
 });
 
 function pollFastTimerStatus() {
+    var timeSinceAction = Date.now() - lastLocalActionAt;
+    if (timeSinceAction < 4000) {
+        return;
+    }
+
     fetch(getAppBasePath() + '/mtq-timer-status')
         .then(function(res) { return res.json(); })
         .then(function(data) {
@@ -1091,15 +1114,9 @@ function pollFastTimerStatus() {
             var tInfo = data.timers[currentSlug];
             if (!tInfo) return;
 
-            // Jika ada aksi sinkronisasi dalam 4 detik terakhir, tahan agar respon server yang tertinggal tidak mereset timer
-            var timeSinceAction = Date.now() - lastLocalActionAt;
-            if (timeSinceAction < 4000 && isTimerRunning !== Boolean(tInfo.is_running)) {
+            if (tInfo.record_id && currentId && Number(tInfo.record_id) !== Number(currentId)) {
+                switchToParticipant(Number(tInfo.record_id));
                 return;
-            }
-
-            if (tInfo.record_id && currentId && tInfo.record_id !== currentId) {
-                currentId = tInfo.record_id;
-                fetchData(currentId);
             }
 
             if (tInfo.is_running) {
@@ -1108,6 +1125,8 @@ function pollFastTimerStatus() {
                     timerSeconds = tInfo.remaining;
                     timerInitialAtStart = tInfo.remaining;
                     timerStartedAt = Date.now();
+                    if (timerSeconds > 60) playedMidSound = false;
+                    if (timerSeconds > 0) playedEndSound = false;
                     updateTimerDisplay(timerSeconds, true);
                     playBeeps(1, 'start');
                 } else if (Math.abs(timerSeconds - tInfo.remaining) > 3) {
@@ -1148,8 +1167,8 @@ function pollFastTimerStatus() {
 function restartPollTimer() {
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(function() {
-        fetchData();
-    }, 2500);
+        if (currentId) fetchData(currentId);
+    }, 4000);
 }
 
 function highlightActiveLeaderboard(id) {
@@ -1544,9 +1563,15 @@ function tickTimer() {
     updateTimerDisplay(remaining, true);
 
     // Rule 5: 1 menit sebelum selesai (2 bel)
-    if (remaining <= 60 && remaining > 0 && !playedMidSound) {
-        playedMidSound = true;
-        playBeeps(2, 'mid');
+    if (remaining > 60) {
+        playedMidSound = false;
+        playedEndSound = false;
+    } else if (remaining <= 60 && remaining > 0) {
+        playedEndSound = false;
+        if (!playedMidSound) {
+            playedMidSound = true;
+            playBeeps(2, 'mid');
+        }
     }
 
     // Rule 6: ketika selesai 00:00 (3 bel) dan STOP di 00:00
@@ -1565,12 +1590,12 @@ function tickTimer() {
 let isFetchingData = false;
 
 function fetchData(forcedId, setActive) {
+    var targetId = (forcedId !== undefined && forcedId !== null) ? Number(forcedId) : currentId;
     if (isFetchingData && forcedId === undefined) return;
     isFetchingData = true;
 
     var reqSeq = ++fetchSequence;
-    var isPreview = (forcedId !== undefined && forcedId !== null);
-    var url = getAppBasePath() + '/live/' + currentSlug + '/data' + (isPreview ? ('/' + Number(forcedId) + (setActive ? '?set_active=1' : '?preview=1')) : '');
+    var url = getAppBasePath() + '/live/' + currentSlug + '/data' + (targetId ? ('/' + targetId + (setActive ? '?set_active=1' : '')) : '');
 
     fetch(url)
         .then(function(res) { return res.json(); })
@@ -1578,7 +1603,7 @@ function fetchData(forcedId, setActive) {
             isFetchingData = false;
             if (!data || data.empty) return;
             if (reqSeq !== fetchSequence) return;
-            if (isPreview && data.current && Number(data.current.id) !== Number(forcedId)) return;
+            if (targetId && data.current && Number(data.current.id) !== Number(targetId)) return;
 
             var isNewParticipant = (data.current && currentId !== null && Number(data.current.id) !== currentId);
 
@@ -1592,21 +1617,13 @@ function fetchData(forcedId, setActive) {
                 if (isNewParticipant || isPreview) {
                     // Peserta berganti (dari Dewan Hakim atau tombol Prev/Next)
                     currentId = Number(data.current.id);
-                    var hasRecentAction = (Date.now() - lastLocalActionAt < 4000);
-                    if (!hasRecentAction || !isTimerRunning) {
-                        isTimerRunning = serverIsRunning;
-                        timerSeconds = serverRemaining;
-                        timerInitialAtStart = serverRemaining;
-                        timerStartedAt = Date.now();
-                        playedMidSound = (serverRemaining <= 60 && serverRemaining > 0);
-                        playedEndSound = (serverRemaining <= 0);
-                        updateTimerDisplay(timerSeconds, isTimerRunning);
-                        if (serverIsRunning && Math.abs(serverRemaining - totalTimerSeconds) <= 2) {
-                            playBeeps(1, 'start');
-                        }
-                    } else {
-                        updateTimerDisplay(timerSeconds, true);
-                    }
+                    isTimerRunning = serverIsRunning;
+                    timerSeconds = serverRemaining;
+                    timerInitialAtStart = serverRemaining;
+                    timerStartedAt = Date.now();
+                    playedMidSound = (serverRemaining <= 60 && serverRemaining > 0);
+                    playedEndSound = (serverRemaining <= 0);
+                    updateTimerDisplay(timerSeconds, isTimerRunning);
                 } else {
                     if (serverIsRunning) {
                         if (!isTimerRunning) {
@@ -1615,6 +1632,8 @@ function fetchData(forcedId, setActive) {
                             timerSeconds = serverRemaining;
                             timerInitialAtStart = serverRemaining;
                             timerStartedAt = Date.now();
+                            if (timerSeconds > 60) playedMidSound = false;
+                            if (timerSeconds > 0) playedEndSound = false;
                             updateTimerDisplay(timerSeconds, true);
                             if (Math.abs(serverRemaining - totalTimerSeconds) <= 2) {
                                 playBeeps(1, 'start');
@@ -1670,7 +1689,13 @@ function navigateParticipant(direction) {
 }
 
 function switchToParticipant(id) {
-    if (!id || id === currentId) return;
+    if (!id) return;
+    id = Number(id);
+
+    // 1. ALWAYS STOP TIMER ON SWITCH! Never auto-play!
+    isTimerRunning = false;
+    playedMidSound = false;
+    playedEndSound = false;
 
     isPaused = true;
     if (pauseResumeTimeout) clearTimeout(pauseResumeTimeout);
@@ -1678,10 +1703,10 @@ function switchToParticipant(id) {
         isPaused = false;
     }, 8000);
 
-    currentId = Number(id);
+    currentId = id;
     window.history.pushState({}, '', getAppBasePath() + '/live/' + currentSlug + '/' + currentId);
 
-    var currentIndex = (allParticipantsData || []).findIndex(function(p) { return p.id == currentId; });
+    var currentIndex = (allParticipantsData || []).findIndex(function(p) { return Number(p.id) === currentId; });
     if (currentIndex !== -1) {
         prevId = currentIndex > 0 ? allParticipantsData[currentIndex - 1].id : null;
         nextId = currentIndex < allParticipantsData.length - 1 ? allParticipantsData[currentIndex + 1].id : null;
@@ -1689,7 +1714,7 @@ function switchToParticipant(id) {
 
     highlightActiveLeaderboard(currentId);
 
-    var pData = (allParticipantsData || []).find(function(p) { return p.id == currentId; });
+    var pData = (allParticipantsData || []).find(function(p) { return Number(p.id) === currentId; });
     if (pData) {
         var pNameEl = document.getElementById('pName');
         var pNumberEl = document.getElementById('pNumber');
@@ -1701,6 +1726,12 @@ function switchToParticipant(id) {
         if (sTotalEl) sTotalEl.textContent = Number(pData.total || 0).toFixed(2);
         updateParticipantPhoto(pData.pasfoto, pData.nama);
         if (pData.fields && pData.fields.length > 0) renderFields(pData.fields);
+
+        // Status awal: jika sudah dinilai langsung 0, jika belum durasi penuh
+        var isScored = Number(pData.total || 0) > 0;
+        timerSeconds = isScored ? 0 : totalTimerSeconds;
+        timerInitialAtStart = timerSeconds;
+        updateTimerDisplay(timerSeconds, false);
     }
 
     lastLocalActionAt = Date.now();
@@ -1712,19 +1743,22 @@ function toggleTimer() {
     lastLocalActionAt = Date.now();
 
     if (!isTimerRunning) {
+        playBeeps(1, 'start'); // 1 bel saat mulai langsung seketika (0ms)
+
         // Jika sudah di 00:00 dan klik start lagi, baru mulai ulang dari awal
         if (timerSeconds <= 0) {
             timerSeconds = totalTimerSeconds;
             playedMidSound = false;
             playedEndSound = false;
+        } else if (timerSeconds > 60) {
+            playedMidSound = false;
         }
         isTimerRunning = true;
         timerStartedAt = Date.now();
         timerInitialAtStart = timerSeconds;
         updateTimerDisplay(timerSeconds, true);
-        playBeeps(1, 'start'); // 1 bel saat mulai
         tickTimer();
-        fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/start?id=' + currentId);
+        fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/start?id=' + currentId + '&remaining=' + timerSeconds);
         showLiveToast('Timer Dimulai');
     } else {
         // Pause
@@ -1732,7 +1766,7 @@ function toggleTimer() {
         isTimerRunning = false;
         timerInitialAtStart = timerSeconds;
         updateTimerDisplay(timerSeconds, false);
-        fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/pause?id=' + currentId);
+        fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/pause?id=' + currentId + '&remaining=' + timerSeconds);
         showLiveToast('Timer Dijeda');
     }
 }
@@ -1747,7 +1781,7 @@ function resetTimer() {
     playedMidSound = false;
     playedEndSound = false;
     updateTimerDisplay(totalTimerSeconds, false);
-    fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/reset?id=' + currentId);
+    fetch(getAppBasePath() + '/live/' + currentSlug + '/timer/reset?id=' + currentId + '&remaining=' + totalTimerSeconds);
     showLiveToast('Timer Direset');
 }
 

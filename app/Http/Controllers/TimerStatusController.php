@@ -17,18 +17,25 @@ class TimerStatusController extends Controller
                 $cacheKey = 'mtq_timer_' . $slug . '_' . $activeId;
                 $timerState = Cache::get($cacheKey);
 
+                $cfg = LiveScoreController::$config[$slug] ?? LiveScoreController::$config['tartil'];
+                $modelClass = $cfg['model'] ?? null;
+                $record = $modelClass ? $modelClass::find($activeId) : null;
+                $isScored = ($record && floatval($record->total ?? 0) > 0);
+
                 if (!$timerState) {
-                    $cfg = LiveScoreController::$config[$slug] ?? LiveScoreController::$config['tartil'];
                     $defaultTimer = $cfg['timer'] ?? '00:05:00';
                     $parts = explode(':', $defaultTimer);
                     $totalSeconds = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
+                    $remainingSeconds = $isScored ? 0 : $totalSeconds;
                     $timerState = [
                         'total_seconds' => $totalSeconds,
-                        'remaining_seconds' => $totalSeconds,
+                        'remaining_seconds' => $remainingSeconds,
                         'is_running' => false,
                         'started_at' => null,
                     ];
                     Cache::put($cacheKey, $timerState, 86400);
+                } elseif ($isScored && empty($timerState['is_running']) && empty($timerState['is_reset_ready'])) {
+                    $timerState['remaining_seconds'] = 0;
                 }
 
                 if ($timerState) {

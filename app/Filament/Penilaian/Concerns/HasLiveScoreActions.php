@@ -35,23 +35,30 @@ class HasLiveScoreActions
         $cacheKey = 'mtq_timer_' . $slug . '_' . $recordId;
         if (!array_key_exists($cacheKey, static::$timerStateCache)) {
             $timerState = Cache::get($cacheKey);
+            $cabang = $record?->peserta?->cabang ?? $record?->grup?->peserta?->first()?->cabang;
+            $timer = $cabang ? $cabang->timer : (\App\Http\Controllers\LiveScoreController::$config[$slug]['timer'] ?? '00:05:00');
+            $parts = explode(':', $timer);
+            if (count($parts) === 3) {
+                $totalSeconds = ((int)$parts[0] * 3600) + ((int)$parts[1] * 60) + (int)$parts[2];
+            } elseif (count($parts) === 2) {
+                $totalSeconds = ((int)$parts[0] * 60) + (int)$parts[1];
+            } else {
+                $totalSeconds = 300;
+            }
+
+            $isScored = ($record && floatval($record->total ?? 0) > 0);
+
             if (!$timerState) {
-                $cabang = $record?->peserta?->cabang ?? $record?->grup?->peserta?->first()?->cabang;
-                $timer = $cabang ? $cabang->timer : (\App\Http\Controllers\LiveScoreController::$config[$slug]['timer'] ?? '00:05:00');
-                $parts = explode(':', $timer);
-                if (count($parts) === 3) {
-                    $totalSeconds = ((int)$parts[0] * 3600) + ((int)$parts[1] * 60) + (int)$parts[2];
-                } elseif (count($parts) === 2) {
-                    $totalSeconds = ((int)$parts[0] * 60) + (int)$parts[1];
-                } else {
-                    $totalSeconds = 300;
-                }
+                $remainingSeconds = $isScored ? 0 : $totalSeconds;
                 $timerState = [
                     'total_seconds' => $totalSeconds,
-                    'remaining_seconds' => $totalSeconds,
+                    'remaining_seconds' => $remainingSeconds,
                     'is_running' => false,
                     'started_at' => null,
                 ];
+                Cache::put($cacheKey, $timerState, 86400);
+            } elseif ($isScored && empty($timerState['is_running']) && empty($timerState['is_reset_ready'])) {
+                $timerState['remaining_seconds'] = 0;
             }
             static::$timerStateCache[$cacheKey] = $timerState;
         }
@@ -87,11 +94,24 @@ class HasLiveScoreActions
             ->label('Timer')
             ->html()
             ->alignCenter()
+            ->extraAttributes(fn ($record) => [
+                'data-slug' => $slug,
+                'data-record-id' => $record->id,
+            ])
+            ->extraCellAttributes(fn ($record) => [
+                'data-slug' => $slug,
+                'data-record-id' => $record->id,
+            ])
             ->getStateUsing(function ($record) use ($slug) {
                 $isActive = (static::getActiveRecordId($slug) == $record->id);
                 $timerState = static::getTimerState($slug, $record->id, $record);
                 $total = (int)($timerState['total_seconds'] ?? 300);
-                $remaining = (int)($timerState['remaining_seconds'] ?? $total);
+                $isScored = ($record && floatval($record->total ?? 0) > 0);
+                if ($isScored && empty($timerState['is_running']) && empty($timerState['is_reset_ready'])) {
+                    $remaining = 0;
+                } else {
+                    $remaining = (int)($timerState['remaining_seconds'] ?? $total);
+                }
 
                 if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
                     $elapsed = time() - $timerState['started_at'];
@@ -252,18 +272,17 @@ class HasLiveScoreActions
         return [
             static::getInputNilaiTableAction($slug),
 
-            Action::make('toggleShowLive')
+            Action::make('showLive')
                 ->label('')
-                ->tooltip(fn ($record) => (static::getActiveRecordId($slug) == $record->id) ? 'Sembunyikan Peserta' : 'Tampilkan Peserta')
-                ->icon(fn ($record) => (static::getActiveRecordId($slug) == $record->id) ? 'heroicon-o-eye-slash' : 'heroicon-o-tv')
-                ->color(fn ($record) => (static::getActiveRecordId($slug) == $record->id) ? 'gray' : 'info')
+                ->tooltip('Tampilkan Peserta')
+                ->icon('heroicon-o-tv')
+                ->color('info')
                 ->extraAttributes(fn ($record) => [
-                    'class' => 'btn-toggle-show-live',
+                    'class' => 'btn-show-live btn-toggle-show-live',
                     'data-record-id' => $record->id,
                     'data-slug' => $slug,
-                    'data-is-active' => (static::getActiveRecordId($slug) == $record->id) ? '1' : '0',
                 ])
-                ->alpineClickHandler(fn ($record) => "window.mtqToggleShowLive('{$slug}', {$record->id}, \$el)"),
+                ->alpineClickHandler(fn ($record) => "window.mtqShowLive('{$slug}', {$record->id}, \$el)"),
 
             Action::make('toggleTimer')
                 ->label('')
@@ -301,7 +320,12 @@ class HasLiveScoreActions
             }
             $timerState = static::getTimerState($slug, $record->id, $record);
             $total = (int)($timerState['total_seconds'] ?? 300);
-            $remaining = (int)($timerState['remaining_seconds'] ?? $total);
+            $isScored = ($record && floatval($record->total ?? 0) > 0);
+            if ($isScored && empty($timerState['is_running']) && empty($timerState['is_reset_ready'])) {
+                $remaining = 0;
+            } else {
+                $remaining = (int)($timerState['remaining_seconds'] ?? $total);
+            }
             if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
                 $elapsed = time() - $timerState['started_at'];
                 $remaining = max(0, $remaining - $elapsed);
