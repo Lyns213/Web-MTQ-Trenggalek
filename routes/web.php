@@ -47,6 +47,8 @@ use App\Http\Controllers\CetakKartuPesertaController;
 //     return view('welcome');
 // });
 
+Route::get('/auth/login', fn () => redirect('/login'))->name('login');
+
 Route::post("/tahun-filter", [\App\Http\Controllers\TahunFilterController::class, "filter"])->name("tahun.filter");
 
 Route::withoutMiddleware([

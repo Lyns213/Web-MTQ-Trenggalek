@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->redirectGuestsTo('/login');
         // $middleware->append(XSS::class);
         // $middleware->append(HttpRedirect::class);
         // $middleware->append(SanitizeReferer::class);

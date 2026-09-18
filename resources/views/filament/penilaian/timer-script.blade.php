@@ -1,32 +1,46 @@
 <style>
 @keyframes mtqSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .timer-cell {
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    min-width: 60px;
+    min-width: 62px;
     padding: 3px 10px;
     border-radius: 8px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
     font-weight: 700 !important;
     font-size: 13.5px !important;
-    background: rgba(255, 255, 255, 0.08);
-    color: #e2e8f0;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(16, 185, 129, 0.08);
+    color: #34d399 !important;
+    border: 1px solid rgba(52, 211, 153, 0.25);
     box-sizing: border-box;
     letter-spacing: 0.5px;
     transition: all 0.2s ease;
 }
-.timer-cell[data-is-running="1"] {
-    background: rgba(16, 185, 129, 0.18) !important;
+.timer-cell[data-is-running="1"],
+tr.timer-active-row .timer-cell {
+    background: rgba(16, 185, 129, 0.22) !important;
     color: #34d399 !important;
-    border-color: rgba(16, 185, 129, 0.4) !important;
+    border-color: rgba(52, 211, 153, 0.6) !important;
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.3) !important;
+}
+tr.timer-active-row,
+tr.timer-active-row > td,
+.fi-ta table tbody tr.timer-active-row,
+.fi-ta table tbody tr.timer-active-row > td {
+    background-color: rgba(16, 185, 129, 0.16) !important;
+}
+tr.timer-active-row:hover,
+tr.timer-active-row:hover > td,
+.fi-ta table tbody tr.timer-active-row:hover,
+.fi-ta table tbody tr.timer-active-row:hover > td {
+    background-color: rgba(16, 185, 129, 0.24) !important;
 }
 tr.timer-active-row {
-    background: rgba(245, 158, 11, 0.08) !important;
+    box-shadow: inset 4px 0 0 #34d399 !important;
 }
-tr.timer-active-row:hover {
-    background: rgba(245, 158, 11, 0.12) !important;
+tr.timer-active-row > td:first-child {
+    border-left: 4px solid #34d399 !important;
 }
 </style>
 <script>
@@ -217,14 +231,6 @@ tr.timer-active-row:hover {
         var row = btn ? btn.closest('tr') : null;
         var cell = row ? row.querySelector('.timer-cell') : document.querySelector('.timer-cell[data-record-id="' + recordId + '"]');
 
-        // Ensure this row's timer is visible and others are hidden
-        if (cell) {
-            cell.style.display = 'inline-flex';
-        }
-        document.querySelectorAll('.timer-cell').forEach(function(c) {
-            if (c !== cell) c.style.display = 'none';
-        });
-
         // Ensure this row is marked active
         if (row) {
             document.querySelectorAll('tr.timer-active-row').forEach(function(r) {
@@ -318,7 +324,6 @@ tr.timer-active-row:hover {
                 if (toggleBtn) setBtnToPlay(toggleBtn);
             }
             if (cell) {
-                cell.style.display = 'none';
                 cell.setAttribute('data-is-running', '0');
             }
             showNotification('Peserta disembunyikan dari live score', 'warning');
@@ -334,7 +339,6 @@ tr.timer-active-row:hover {
             });
             document.querySelectorAll('.timer-cell').forEach(function(c) {
                 if (c !== cell) {
-                    c.style.display = 'none';
                     c.setAttribute('data-is-running', '0');
                 }
             });
@@ -745,7 +749,6 @@ tr.timer-active-row:hover {
                     var row = cell.closest('tr');
 
                     if (tInfo && tInfo.record_id === recordId) {
-                        cell.style.display = 'inline-flex';
                         cell.setAttribute('data-is-running', tInfo.is_running ? '1' : '0');
                         var localRem = parseInt(cell.getAttribute('data-remaining'), 10);
                         if (isNaN(localRem) || Math.abs(localRem - tInfo.remaining) > 2) {
@@ -764,7 +767,6 @@ tr.timer-active-row:hover {
                             if (showBtn) setBtnToUnshow(showBtn);
                         }
                     } else if (tInfo && tInfo.record_id !== recordId) {
-                        cell.style.display = 'none';
                         if (row) {
                             row.classList.remove('timer-active-row');
                             var showBtn = row.querySelector('.btn-toggle-show-live');
@@ -793,7 +795,6 @@ tr.timer-active-row:hover {
                     var row = cell.closest('tr');
 
                     if (ev.recordId && ev.recordId === recordId) {
-                        cell.style.display = 'inline-flex';
                         if (row) row.classList.add('timer-active-row');
                         var showBtn = row ? row.querySelector('.btn-toggle-show-live') : null;
                         if (showBtn) setBtnToUnshow(showBtn);
@@ -822,7 +823,6 @@ tr.timer-active-row:hover {
                             if (toggleBtn) setBtnToPlay(toggleBtn);
                         }
                     } else if (ev.recordId && ev.recordId !== recordId) {
-                        cell.style.display = 'none';
                         if (row) {
                             row.classList.remove('timer-active-row');
                             var showBtn = row.querySelector('.btn-toggle-show-live');
@@ -831,7 +831,6 @@ tr.timer-active-row:hover {
                             if (toggleBtn) setBtnToPlay(toggleBtn);
                         }
                     } else if (ev.action === 'unshow_participant') {
-                        cell.style.display = 'none';
                         if (row) {
                             row.classList.remove('timer-active-row');
                             var showBtn = row.querySelector('.btn-toggle-show-live');

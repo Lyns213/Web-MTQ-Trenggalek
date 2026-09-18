@@ -600,11 +600,8 @@ html.dark .fi-panel-penilaian .penilaian-section-border {
     transform: scale(0.9);
 }
 
-/* Hanya tampilkan tombol input nilai (+) pada peserta yang sedang tampil di live score */
+/* Tampilkan tombol tambah/input nilai pada semua peserta */
 .btn-input-nilai {
-    display: none !important;
-}
-tr.timer-active-row .btn-input-nilai {
     display: inline-flex !important;
 }
 </style>

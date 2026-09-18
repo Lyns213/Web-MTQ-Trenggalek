@@ -102,7 +102,6 @@ class HasLiveScoreActions
                 $s = $remaining % 60;
                 $formatted = sprintf('%02d:%02d', $m, $s);
                 $isRunning = (!empty($timerState['is_running'])) ? '1' : '0';
-                $display = $isActive ? 'inline-flex' : 'none';
 
                 return '<span class="timer-cell" '
                     . 'data-slug="' . htmlspecialchars($slug, ENT_QUOTES) . '" '
@@ -110,8 +109,7 @@ class HasLiveScoreActions
                     . 'data-total-seconds="' . $total . '" '
                     . 'data-remaining="' . $remaining . '" '
                     . 'data-is-running="' . $isRunning . '" '
-                    . 'data-format="ms" '
-                    . 'style="display: ' . $display . ';">'
+                    . 'data-format="ms">'
                     . $formatted
                     . '</span>';
             });

@@ -88,21 +88,23 @@
     color: #374151 !important;
 }
 
-/* Timer Active Row - Subtle Yellow */
-.fi-ta table tbody tr.timer-active-row {
-    background: #fef3c7 !important;
+/* Timer Active Row - Green matching timer font (#34d399) */
+.fi-ta table tbody tr.timer-active-row,
+.fi-ta table tbody tr.timer-active-row > td {
+    background: rgba(16, 185, 129, 0.16) !important;
 }
 
-.fi-ta table tbody tr.timer-active-row:hover {
-    background: #fde68a !important;
+.fi-ta table tbody tr.timer-active-row:hover,
+.fi-ta table tbody tr.timer-active-row:hover > td {
+    background: rgba(16, 185, 129, 0.24) !important;
 }
 
 /* Timer Cell */
 .timer-cell {
     font-family: ui-monospace, monospace !important;
-    font-weight: 600 !important;
-    font-size: 14px !important;
-    color: #92400e !important;
+    font-weight: 700 !important;
+    font-size: 13.5px !important;
+    color: #34d399 !important;
 }
 
 /* Search and Filter */
