@@ -1037,7 +1037,7 @@ let pollTimer = null;
 function handleDirectSync(ev) {
     if (!ev || ev.slug !== currentSlug) return;
 
-    if (ev.action === 'show_participant' || (ev.recordId && currentId && Number(ev.recordId) !== Number(currentId))) {
+    if (ev.action === 'show_participant') {
         if (ev.recordId) {
             switchToParticipant(Number(ev.recordId));
         }
@@ -1045,6 +1045,8 @@ function handleDirectSync(ev) {
     }
 
     if (ev.action === 'start') {
+        // Abaikan jika bukan peserta yang sedang live
+        if (ev.recordId && currentId && Number(ev.recordId) !== Number(currentId)) return;
         lastLocalActionAt = Date.now();
         playBeeps(1, 'start');
         var targetRem = (ev.remaining !== undefined && ev.remaining !== null && Number(ev.remaining) > 0)
@@ -1053,17 +1055,28 @@ function handleDirectSync(ev) {
         isTimerRunning = true;
         timerSeconds = targetRem;
         timerInitialAtStart = timerSeconds;
-        timerStartedAt = Date.now();
+        // Pakai timestamp dari dewan untuk eliminasi jeda network broadcast
+        timerStartedAt = (ev.timestamp && ev.timestamp > 0) ? ev.timestamp : Date.now();
         if (timerSeconds > 60) playedMidSound = false;
         if (timerSeconds > 0) playedEndSound = false;
-        updateTimerDisplay(timerSeconds, true);
+        updateTimerDisplay(getRemainingSeconds(), true);
     } else if (ev.action === 'pause') {
+        if (ev.recordId && currentId && Number(ev.recordId) !== Number(currentId)) return;
         lastLocalActionAt = Date.now();
+        // Hitung dulu sebelum stop — getRemainingSeconds() butuh isTimerRunning=true
+        var calcRem = isTimerRunning
+            ? Math.max(0, timerInitialAtStart - Math.floor((Date.now() - timerStartedAt) / 1000))
+            : timerSeconds;
+        // Validasi — kalau hasil lokal tidak masuk akal, fallback ke ev.remaining dari dewan
+        if (calcRem <= 0 && ev.remaining !== undefined && Number(ev.remaining) > 0) {
+            calcRem = Number(ev.remaining);
+        }
         isTimerRunning = false;
-        timerSeconds = ev.remaining !== undefined ? Number(ev.remaining) : getRemainingSeconds();
-        timerInitialAtStart = timerSeconds;
-        updateTimerDisplay(timerSeconds, false);
+        timerSeconds = calcRem;
+        timerInitialAtStart = calcRem;
+        updateTimerDisplay(calcRem, false);
     } else if (ev.action === 'reset') {
+        if (ev.recordId && currentId && Number(ev.recordId) !== Number(currentId)) return;
         lastLocalActionAt = Date.now();
         isTimerRunning = false;
         timerSeconds = Number(ev.total || totalTimerSeconds);
@@ -1072,19 +1085,36 @@ function handleDirectSync(ev) {
         playedEndSound = false;
         updateTimerDisplay(timerSeconds, false);
     } else if (ev.action === 'score_saved') {
-        if (ev.recordId) {
+        if (ev.recordId && ev.scores) {
+            // Update allParticipantsData total & fields
             var targetP = (allParticipantsData || []).find(function(p) { return Number(p.id) === Number(ev.recordId); });
-            if (targetP && ev.remaining !== undefined) {
-                targetP.total = Number(ev.remaining || 0);
+            if (targetP) {
+                var newTotal = 0;
+                Object.keys(ev.scores).forEach(function(k) {
+                    if (k !== 'total') newTotal += Number(ev.scores[k] || 0);
+                });
+                if (ev.scores.total !== undefined) newTotal = Number(ev.scores.total);
+                targetP.total = newTotal;
+                if (targetP.fields) {
+                    targetP.fields.forEach(function(f) {
+                        if (ev.scores[f.key] !== undefined) {
+                            f.value = Number(ev.scores[f.key] || 0);
+                            f.pct = Math.min(100, Math.max(0, (f.value / (f.max || 100)) * 100));
+                        }
+                    });
+                }
             }
-        }
-        if (ev.recordId && currentId && Number(ev.recordId) === Number(currentId)) {
-            var sTotalEl = document.getElementById('sTotal');
-            if (sTotalEl && ev.remaining !== undefined) {
-                sTotalEl.textContent = Number(ev.remaining || 0).toFixed(2);
+            // Update display jika peserta ini sedang live
+            if (currentId && Number(ev.recordId) === Number(currentId)) {
+                var sTotalEl = document.getElementById('sTotal');
+                if (sTotalEl) sTotalEl.textContent = (targetP ? Number(targetP.total) : 0).toFixed(2);
+                if (targetP && targetP.fields) renderFields(targetP.fields);
             }
+            // Update leaderboard score tampilan
+            renderLeaderboard(null, false);
         }
-        fetchData(currentId);
+        // Fetch fresh data dengan delay kecil agar DB sudah tersimpan
+        setTimeout(function() { fetchData(currentId); }, 800);
     }
 }
 
@@ -1101,74 +1131,30 @@ window.addEventListener('storage', function(e) {
     }
 });
 
-function pollFastTimerStatus() {
-    var timeSinceAction = Date.now() - lastLocalActionAt;
-    if (timeSinceAction < 4000) {
-        return;
-    }
-
-    fetch(getAppBasePath() + '/mtq-timer-status')
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-            if (!data || !data.timers) return;
-            var tInfo = data.timers[currentSlug];
-            if (!tInfo) return;
-
-            if (tInfo.record_id && currentId && Number(tInfo.record_id) !== Number(currentId)) {
-                switchToParticipant(Number(tInfo.record_id));
-                return;
-            }
-
-            if (tInfo.is_running) {
-                if (!isTimerRunning) {
-                    isTimerRunning = true;
-                    timerSeconds = tInfo.remaining;
-                    timerInitialAtStart = tInfo.remaining;
-                    timerStartedAt = Date.now();
-                    if (timerSeconds > 60) playedMidSound = false;
-                    if (timerSeconds > 0) playedEndSound = false;
-                    updateTimerDisplay(timerSeconds, true);
-                    playBeeps(1, 'start');
-                } else if (Math.abs(timerSeconds - tInfo.remaining) > 3) {
-                    timerSeconds = tInfo.remaining;
-                    timerInitialAtStart = tInfo.remaining;
-                    timerStartedAt = Date.now();
-                }
-            } else {
-                var timeSinceAction = Date.now() - lastLocalActionAt;
-                if (timeSinceAction < 4000) {
-                    return;
-                }
-
-                if (isTimerRunning) {
-                    if (tInfo.remaining >= totalTimerSeconds - 1) {
-                        isTimerRunning = false;
-                        timerSeconds = totalTimerSeconds;
-                        timerInitialAtStart = totalTimerSeconds;
-                        playedMidSound = false;
-                        playedEndSound = false;
-                        updateTimerDisplay(totalTimerSeconds, false);
-                    } else {
-                        isTimerRunning = false;
-                        timerSeconds = tInfo.remaining;
-                        timerInitialAtStart = tInfo.remaining;
-                        updateTimerDisplay(timerSeconds, false);
-                    }
-                } else if (tInfo.remaining >= totalTimerSeconds - 1 && timerSeconds !== totalTimerSeconds) {
-                    timerSeconds = totalTimerSeconds;
-                    timerInitialAtStart = totalTimerSeconds;
-                    updateTimerDisplay(totalTimerSeconds, false);
-                }
-            }
-        })
-        .catch(function() {});
-}
+// pollFastTimerStatus dihapus — digantikan fetchData polling 3 detik
+// fetchData sudah handle semua state sync dari server
 
 function restartPollTimer() {
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(function() {
-        if (currentId) fetchData(currentId);
-    }, 4000);
+        if (!currentId) return;
+        // Kirim tanpa ID agar server return peserta aktif dari cache — untuk deteksi switch peserta
+        var pollUrl = getAppBasePath() + '/live/' + currentSlug + '/data';
+        fetch(pollUrl)
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (!data || data.empty || !data.current) return;
+                var serverId = Number(data.current.id);
+                if (serverId && serverId !== Number(currentId)) {
+                    // Peserta aktif di server beda — switch tanpa beep
+                    switchToParticipant(serverId);
+                } else {
+                    // Sama — update display & timer state
+                    fetchData(currentId);
+                }
+            })
+            .catch(function() {});
+    }, 3000);
 }
 
 function highlightActiveLeaderboard(id) {
@@ -1562,7 +1548,7 @@ function tickTimer() {
     timerSeconds = remaining;
     updateTimerDisplay(remaining, true);
 
-    // Rule 5: 1 menit sebelum selesai (2 bel)
+    // Suara mid: tepat saat crossing batas 60 detik (dari atas ke bawah)
     if (remaining > 60) {
         playedMidSound = false;
         playedEndSound = false;
@@ -1574,7 +1560,7 @@ function tickTimer() {
         }
     }
 
-    // Rule 6: ketika selesai 00:00 (3 bel) dan STOP di 00:00
+    // Suara end: saat 00:00
     if (remaining <= 0) {
         isTimerRunning = false;
         timerSeconds = 0;
@@ -1589,7 +1575,7 @@ function tickTimer() {
 
 let isFetchingData = false;
 
-function fetchData(forcedId, setActive) {
+function fetchData(forcedId, setActive, fromUserAction) {
     var targetId = (forcedId !== undefined && forcedId !== null) ? Number(forcedId) : currentId;
     if (isFetchingData && forcedId === undefined) return;
     isFetchingData = true;
@@ -1603,76 +1589,71 @@ function fetchData(forcedId, setActive) {
             isFetchingData = false;
             if (!data || data.empty) return;
             if (reqSeq !== fetchSequence) return;
+
+            // Jika server kembalikan peserta berbeda dari yang diminta, abaikan (stale)
             if (targetId && data.current && Number(data.current.id) !== Number(targetId)) return;
 
             var isNewParticipant = (data.current && currentId !== null && Number(data.current.id) !== currentId);
 
             updateDisplay(data);
 
-            if (data.timer) {
-                totalTimerSeconds = Number(data.timer.total) || 300;
-                var serverRemaining = Number(data.timer.remaining);
-                var serverIsRunning = Boolean(data.timer.is_running);
+            if (!data.timer) return;
 
-                if (isNewParticipant || isPreview) {
-                    // Peserta berganti (dari Dewan Hakim atau tombol Prev/Next)
-                    currentId = Number(data.current.id);
-                    isTimerRunning = serverIsRunning;
+            totalTimerSeconds = Number(data.timer.total) || 300;
+            var serverRemaining = Number(data.timer.remaining);
+            var serverIsRunning = Boolean(data.timer.is_running);
+            var serverStartedAtMs = data.timer.started_at_ms || null;
+
+            if (isNewParticipant) {
+                // Peserta beda dari server — update semua state, NO beep dari poll
+                currentId = Number(data.current.id);
+                isTimerRunning = serverIsRunning;
+                timerSeconds = serverRemaining;
+                timerInitialAtStart = serverRemaining;
+                // Pakai started_at_ms server untuk sync presisi cross-device
+                timerStartedAt = serverStartedAtMs || Date.now();
+                playedMidSound = (serverRemaining <= 60 && serverRemaining > 0);
+                playedEndSound = (serverRemaining <= 0);
+                updateTimerDisplay(serverIsRunning ? getRemainingSeconds() : timerSeconds, isTimerRunning);
+                return;
+            }
+
+            if (serverIsRunning) {
+                if (!isTimerRunning) {
+                    // Server running, lokal stop — sync state TANPA beep (beep hanya dari broadcast)
+                    isTimerRunning = true;
                     timerSeconds = serverRemaining;
                     timerInitialAtStart = serverRemaining;
-                    timerStartedAt = Date.now();
-                    playedMidSound = (serverRemaining <= 60 && serverRemaining > 0);
-                    playedEndSound = (serverRemaining <= 0);
-                    updateTimerDisplay(timerSeconds, isTimerRunning);
-                } else {
-                    if (serverIsRunning) {
-                        if (!isTimerRunning) {
-                            // Dewan Hakim baru saja memulai timer
-                            isTimerRunning = true;
-                            timerSeconds = serverRemaining;
-                            timerInitialAtStart = serverRemaining;
-                            timerStartedAt = Date.now();
-                            if (timerSeconds > 60) playedMidSound = false;
-                            if (timerSeconds > 0) playedEndSound = false;
-                            updateTimerDisplay(timerSeconds, true);
-                            if (Math.abs(serverRemaining - totalTimerSeconds) <= 2) {
-                                playBeeps(1, 'start');
-                            }
-                        } else {
-                            // Timer sedang berjalan: jangan pernah reset display ke 5 menit!
-                            // Hanya sinkronkan offset jika drift lebih dari 4 detik
-                            if (Math.abs(timerSeconds - serverRemaining) > 4) {
-                                timerSeconds = serverRemaining;
-                                timerInitialAtStart = serverRemaining;
-                                timerStartedAt = Date.now();
-                            }
-                        }
-                    } else {
-                        // Server tidak berjalan (jeda / reset dari dewan hakim)
-                        var timeSinceAction = Date.now() - lastLocalActionAt;
-                        if (timeSinceAction < 4000) {
-                            return;
-                        }
-                        if (isTimerRunning) {
-                            if (serverRemaining >= totalTimerSeconds - 1) {
-                                isTimerRunning = false;
-                                timerSeconds = totalTimerSeconds;
-                                timerInitialAtStart = totalTimerSeconds;
-                                playedMidSound = false;
-                                playedEndSound = false;
-                                updateTimerDisplay(totalTimerSeconds, false);
-                            } else {
-                                isTimerRunning = false;
-                                timerSeconds = serverRemaining;
-                                timerInitialAtStart = serverRemaining;
-                                updateTimerDisplay(timerSeconds, false);
-                            }
-                        } else if (serverRemaining >= totalTimerSeconds - 1 && timerSeconds !== totalTimerSeconds) {
-                            timerSeconds = totalTimerSeconds;
-                            timerInitialAtStart = totalTimerSeconds;
-                            updateTimerDisplay(totalTimerSeconds, false);
-                        }
+                    // Pakai started_at_ms server agar presisi sama dengan dewan
+                    timerStartedAt = serverStartedAtMs || Date.now();
+                    if (timerSeconds > 60) playedMidSound = false;
+                    if (timerSeconds > 0) playedEndSound = false;
+                    updateTimerDisplay(getRemainingSeconds(), true);
+                    // Beep HANYA jika ini dipanggil dari user action (bukan poll)
+                    if (fromUserAction) {
+                        playBeeps(1, 'start');
                     }
+                } else {
+                    // Keduanya running — koreksi drift >3 detik, pakai started_at_ms server
+                    var localRem = getRemainingSeconds();
+                    if (Math.abs(localRem - serverRemaining) > 3) {
+                        timerSeconds = serverRemaining;
+                        timerInitialAtStart = serverRemaining;
+                        timerStartedAt = serverStartedAtMs || Date.now();
+                    }
+                }
+            } else {
+                // Server stop — sync lokal ke stop
+                if (isTimerRunning) {
+                    isTimerRunning = false;
+                    timerSeconds = serverRemaining;
+                    timerInitialAtStart = serverRemaining;
+                    updateTimerDisplay(timerSeconds, false);
+                } else if (Math.abs(timerSeconds - serverRemaining) > 2) {
+                    // Lokal sudah stop, tapi nilai beda (misal setelah reset) — update display
+                    timerSeconds = serverRemaining;
+                    timerInitialAtStart = serverRemaining;
+                    updateTimerDisplay(timerSeconds, false);
                 }
             }
         })
@@ -1735,9 +1716,8 @@ function switchToParticipant(id) {
     }
 
     lastLocalActionAt = Date.now();
-    fetchData(currentId, true);
+    fetchData(currentId, true, true);
 }
-
 function toggleTimer() {
     if (!currentId) return;
     lastLocalActionAt = Date.now();
@@ -1815,12 +1795,11 @@ updateTimerDisplay(timerSeconds, isTimerRunning);
 fetchData();
 initAutoScroll();
 restartPollTimer();
-setInterval(pollFastTimerStatus, 350);
 setInterval(function() {
     if (isTimerRunning) {
         tickTimer();
     }
-}, 500);
+}, 250);
 </script>
 </body>
 </html>

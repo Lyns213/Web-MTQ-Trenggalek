@@ -917,8 +917,8 @@ tr.timer-active-row.timer-phase-red > td:last-child {
             }
         }
 
-        // 3. Broadcast to live screen (Do NOT force timer to 0! Send total and scoreMap)
-        broadcastTimerSync('score_saved', slug, recordId, total, 0, scoreMap);
+        // 3. Broadcast to live screen (kirim scoreMap saja, jangan ubah timer)
+        broadcastTimerSync('score_saved', slug, recordId, null, null, scoreMap);
 
         // 4. Background save
         fetch(APP_BASE + '/simpan-nilai/' + slug, {

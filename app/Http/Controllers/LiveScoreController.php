@@ -497,6 +497,9 @@ class LiveScoreController extends Controller
                 'remaining' => $remaining,
                 'total' => $timerState['total_seconds'],
                 'is_running' => $timerState['is_running'],
+                'started_at_ms' => ($timerState['is_running'] && $timerState['started_at'])
+                    ? (int)($timerState['started_at'] * 1000)
+                    : null,
             ],
             'active_id' => (int)$currentRecord->id,
             'total_peserta' => $records->count(),
@@ -516,7 +519,10 @@ class LiveScoreController extends Controller
             return new \Illuminate\Http\JsonResponse(['success' => true, 'unshow' => true]);
         }
 
-        Cache::put('mtq_live_active_' . $slug, (int)$id, 86400);
+        // Hanya update active peserta saat action 'show', bukan reset/start/pause
+        if ($action === 'show') {
+            Cache::put('mtq_live_active_' . $slug, (int)$id, 86400);
+        }
 
         $cfg = self::$config[$slug] ?? self::$config['tartil'];
         $cacheKey = 'mtq_timer_' . $slug . '_' . $id;
