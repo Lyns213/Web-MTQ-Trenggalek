@@ -548,10 +548,8 @@ class LiveScoreController extends Controller
             // Saat ganti/tampilkan peserta, timer HARUS BERHENTI, jangan pernah auto-play!
             $timerState['is_running'] = false;
             $timerState['started_at'] = null;
-            if ($isScored) {
-                $timerState['remaining_seconds'] = 0;
-                $timerState['is_reset_ready'] = false;
-            }
+            // Jangan paksa remaining=0 untuk peserta sudah dinilai
+            // Biarkan remaining tetap apa adanya (0 jika memang sudah 0, atau nilai sebelumnya)
             Cache::put($cacheKey, $timerState, 86400);
 
             $calcRemaining = (int)$timerState['remaining_seconds'];

@@ -511,14 +511,17 @@ tr.timer-active-row.timer-phase-red > td:last-child {
             broadcastTimerSync('start', slug, recordId, rem, total);
             fetch(APP_BASE + '/live/' + slug + '/timer/start?id=' + recordId + '&remaining=' + rem);
         } else {
+            // PAUSE: hitung sisa waktu dari cell sebelum stop
+            var pauseRem = parseInt(cell ? cell.getAttribute('data-remaining') : '0', 10);
+            if (isNaN(pauseRem) || pauseRem < 0) pauseRem = 0;
             if (cell) {
                 cell.setAttribute('data-is-running', '0');
-                updateRowAndCellPhase(cell, rem);
+                updateRowAndCellPhase(cell, pauseRem);
             }
             setBtnToPlay(btn);
             showNotification('Timer dijeda', 'warning');
-            broadcastTimerSync('pause', slug, recordId, rem, total);
-            fetch(APP_BASE + '/live/' + slug + '/timer/pause?id=' + recordId + '&remaining=' + rem);
+            broadcastTimerSync('pause', slug, recordId, pauseRem, total);
+            fetch(APP_BASE + '/live/' + slug + '/timer/pause?id=' + recordId + '&remaining=' + pauseRem);
         }
     };
 

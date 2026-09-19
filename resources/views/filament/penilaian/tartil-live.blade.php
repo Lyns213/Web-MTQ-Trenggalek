@@ -1047,29 +1047,39 @@ function handleDirectSync(ev) {
     if (ev.action === 'start') {
         // Abaikan jika bukan peserta yang sedang live
         if (ev.recordId && currentId && Number(ev.recordId) !== Number(currentId)) return;
+        var isLocalAction = (Date.now() - lastLocalActionAt) < 500;
         lastLocalActionAt = Date.now();
-        playBeeps(1, 'start');
+        // Hanya beep jika BUKAN dari live page sendiri (cegah double suara)
+        if (!isLocalAction) playBeeps(1, 'start');
         var targetRem = (ev.remaining !== undefined && ev.remaining !== null && Number(ev.remaining) > 0)
             ? Number(ev.remaining)
             : totalTimerSeconds;
         isTimerRunning = true;
         timerSeconds = targetRem;
         timerInitialAtStart = timerSeconds;
-        // Pakai timestamp dari dewan untuk eliminasi jeda network broadcast
-        timerStartedAt = (ev.timestamp && ev.timestamp > 0) ? ev.timestamp : Date.now();
+        // Koreksi network latency: ev.timestamp = waktu dewan klik, elapsed sejak itu
+        var evTs = (ev.timestamp && ev.timestamp > 0) ? ev.timestamp : Date.now();
+        var networkDelay = Date.now() - evTs;
+        // Kompensasi delay (max 5 detik untuk keamanan)
+        if (networkDelay > 0 && networkDelay < 5000) {
+            timerSeconds = Math.max(0, targetRem - Math.floor(networkDelay / 1000));
+        }
+        timerInitialAtStart = timerSeconds;
+        timerStartedAt = Date.now();
         if (timerSeconds > 60) playedMidSound = false;
         if (timerSeconds > 0) playedEndSound = false;
         updateTimerDisplay(getRemainingSeconds(), true);
     } else if (ev.action === 'pause') {
         if (ev.recordId && currentId && Number(ev.recordId) !== Number(currentId)) return;
         lastLocalActionAt = Date.now();
-        // Hitung dulu sebelum stop — getRemainingSeconds() butuh isTimerRunning=true
-        var calcRem = isTimerRunning
-            ? Math.max(0, timerInitialAtStart - Math.floor((Date.now() - timerStartedAt) / 1000))
-            : timerSeconds;
-        // Validasi — kalau hasil lokal tidak masuk akal, fallback ke ev.remaining dari dewan
-        if (calcRem <= 0 && ev.remaining !== undefined && Number(ev.remaining) > 0) {
+        // Gunakan ev.remaining dari dewan sebagai sumber kebenaran saat pause
+        var calcRem;
+        if (ev.remaining !== undefined && ev.remaining !== null && Number(ev.remaining) >= 0) {
             calcRem = Number(ev.remaining);
+        } else {
+            calcRem = isTimerRunning
+                ? Math.max(0, timerInitialAtStart - Math.floor((Date.now() - timerStartedAt) / 1000))
+                : timerSeconds;
         }
         isTimerRunning = false;
         timerSeconds = calcRem;
@@ -1138,6 +1148,8 @@ function restartPollTimer() {
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(function() {
         if (!currentId) return;
+        // Abaikan poll saat baru ada action lokal (grace period 5 detik)
+        if ((Date.now() - lastLocalActionAt) < 5000) return;
         // Kirim tanpa ID agar server return peserta aktif dari cache — untuk deteksi switch peserta
         var pollUrl = getAppBasePath() + '/live/' + currentSlug + '/data';
         fetch(pollUrl)
@@ -1556,6 +1568,7 @@ function tickTimer() {
         playedEndSound = false;
         if (!playedMidSound) {
             playedMidSound = true;
+            getLiveAudioCtx(); // pastikan context aktif
             playBeeps(2, 'mid');
         }
     }
@@ -1568,6 +1581,7 @@ function tickTimer() {
         updateTimerDisplay(0, false);
         if (!playedEndSound) {
             playedEndSound = true;
+            getLiveAudioCtx(); // pastikan context aktif
             playBeeps(3, 'end');
         }
     }
@@ -1620,37 +1634,36 @@ function fetchData(forcedId, setActive, fromUserAction) {
 
             if (serverIsRunning) {
                 if (!isTimerRunning) {
-                    // Server running, lokal stop — sync state TANPA beep (beep hanya dari broadcast)
+                    // Server running, lokal stop — abaikan jika baru ada action lokal
+                    if ((Date.now() - lastLocalActionAt) < 4000) return;
                     isTimerRunning = true;
                     timerSeconds = serverRemaining;
                     timerInitialAtStart = serverRemaining;
-                    // Pakai started_at_ms server agar presisi sama dengan dewan
                     timerStartedAt = serverStartedAtMs || Date.now();
                     if (timerSeconds > 60) playedMidSound = false;
                     if (timerSeconds > 0) playedEndSound = false;
                     updateTimerDisplay(getRemainingSeconds(), true);
-                    // Beep HANYA jika ini dipanggil dari user action (bukan poll)
-                    if (fromUserAction) {
-                        playBeeps(1, 'start');
-                    }
+                    if (fromUserAction) playBeeps(1, 'start');
                 } else {
-                    // Keduanya running — koreksi drift >3 detik, pakai started_at_ms server
-                    var localRem = getRemainingSeconds();
-                    if (Math.abs(localRem - serverRemaining) > 3) {
-                        timerSeconds = serverRemaining;
-                        timerInitialAtStart = serverRemaining;
-                        timerStartedAt = serverStartedAtMs || Date.now();
+                    // Keduanya running — koreksi drift > 1 detik pakai started_at_ms server
+                    if (serverStartedAtMs) {
+                        var localRem = getRemainingSeconds();
+                        if (Math.abs(localRem - serverRemaining) > 1) {
+                            timerSeconds = serverRemaining;
+                            timerInitialAtStart = serverRemaining;
+                            timerStartedAt = serverStartedAtMs;
+                        }
                     }
                 }
             } else {
-                // Server stop — sync lokal ke stop
+                // Server stop — abaikan jika baru ada action lokal (grace 4 detik)
+                if ((Date.now() - lastLocalActionAt) < 4000) return;
                 if (isTimerRunning) {
                     isTimerRunning = false;
                     timerSeconds = serverRemaining;
                     timerInitialAtStart = serverRemaining;
                     updateTimerDisplay(timerSeconds, false);
                 } else if (Math.abs(timerSeconds - serverRemaining) > 2) {
-                    // Lokal sudah stop, tapi nilai beda (misal setelah reset) — update display
                     timerSeconds = serverRemaining;
                     timerInitialAtStart = serverRemaining;
                     updateTimerDisplay(timerSeconds, false);
@@ -1708,14 +1721,14 @@ function switchToParticipant(id) {
         updateParticipantPhoto(pData.pasfoto, pData.nama);
         if (pData.fields && pData.fields.length > 0) renderFields(pData.fields);
 
-        // Status awal: jika sudah dinilai langsung 0, jika belum durasi penuh
-        var isScored = Number(pData.total || 0) > 0;
-        timerSeconds = isScored ? 0 : totalTimerSeconds;
+        // Tampilkan sementara dari data lokal, fetchData akan override dengan nilai server
+        timerSeconds = totalTimerSeconds; // sementara penuh, server akan koreksi
         timerInitialAtStart = timerSeconds;
         updateTimerDisplay(timerSeconds, false);
     }
 
     lastLocalActionAt = Date.now();
+    // fetchData akan override timerSeconds dengan nilai server yang benar
     fetchData(currentId, true, true);
 }
 function toggleTimer() {
@@ -1723,7 +1736,8 @@ function toggleTimer() {
     lastLocalActionAt = Date.now();
 
     if (!isTimerRunning) {
-        playBeeps(1, 'start'); // 1 bel saat mulai langsung seketika (0ms)
+        // Jangan beep di sini — handleDirectSync akan terima broadcast dari dewan dan beep di sana
+        // (menghindari double suara karena live juga subscribe BroadcastChannel)
 
         // Jika sudah di 00:00 dan klik start lagi, baru mulai ulang dari awal
         if (timerSeconds <= 0) {
