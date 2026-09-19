@@ -82,6 +82,7 @@ class PenilaianPanelProvider extends PanelProvider
             ->maxContentWidth('full')
             ->defaultThemeMode(ThemeMode::Light)
             ->favicon(asset('images/logotgxmini.png'))
-            ->breadcrumbs(false);
+            ->breadcrumbs(false)
+            ->spa();
     }
 }

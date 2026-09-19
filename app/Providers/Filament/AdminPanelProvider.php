@@ -84,6 +84,7 @@ class AdminPanelProvider extends PanelProvider
                 "panels::global-search.before",
                 fn () => view("filament.plugins.tahun-filter-blade")
             )
-            ->breadcrumbs(false);
+            ->breadcrumbs(false)
+            ->spa();
     }
 }

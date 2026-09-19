@@ -1148,8 +1148,8 @@ function restartPollTimer() {
     if (pollTimer) clearInterval(pollTimer);
     pollTimer = setInterval(function() {
         if (!currentId) return;
-        // Abaikan poll saat baru ada action lokal (grace period 5 detik)
-        if ((Date.now() - lastLocalActionAt) < 5000) return;
+        // Grace period hanya 2 detik — cukup untuk hindari race, tapi cepat sync cross-device
+        if ((Date.now() - lastLocalActionAt) < 2000) return;
         // Kirim tanpa ID agar server return peserta aktif dari cache — untuk deteksi switch peserta
         var pollUrl = getAppBasePath() + '/live/' + currentSlug + '/data';
         fetch(pollUrl)
@@ -1166,7 +1166,7 @@ function restartPollTimer() {
                 }
             })
             .catch(function() {});
-    }, 3000);
+    }, 2000);
 }
 
 function highlightActiveLeaderboard(id) {
@@ -1635,7 +1635,7 @@ function fetchData(forcedId, setActive, fromUserAction) {
             if (serverIsRunning) {
                 if (!isTimerRunning) {
                     // Server running, lokal stop — abaikan jika baru ada action lokal
-                    if ((Date.now() - lastLocalActionAt) < 4000) return;
+                    if ((Date.now() - lastLocalActionAt) < 2000) return;
                     isTimerRunning = true;
                     timerSeconds = serverRemaining;
                     timerInitialAtStart = serverRemaining;
@@ -1656,8 +1656,8 @@ function fetchData(forcedId, setActive, fromUserAction) {
                     }
                 }
             } else {
-                // Server stop — abaikan jika baru ada action lokal (grace 4 detik)
-                if ((Date.now() - lastLocalActionAt) < 4000) return;
+                // Server stop — abaikan jika baru ada action lokal (grace 2 detik)
+                if ((Date.now() - lastLocalActionAt) < 2000) return;
                 if (isTimerRunning) {
                     isTimerRunning = false;
                     timerSeconds = serverRemaining;

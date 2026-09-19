@@ -421,12 +421,19 @@ class LiveScoreController extends Controller
                 'started_at' => null,
             ];
             Cache::put($cacheKey, $timerState, 86400);
-        } elseif ($isScored && empty($timerState['is_running']) && empty($timerState['is_reset_ready'])) {
-            $timerState['remaining_seconds'] = 0;
+        } else {
+            // Selalu sync total_seconds dari config (fix cache stale saat config berubah)
+            if ($timerState['total_seconds'] !== $totalSeconds) {
+                $timerState['total_seconds'] = $totalSeconds;
+                if ($timerState['remaining_seconds'] > $totalSeconds) {
+                    $timerState['remaining_seconds'] = $totalSeconds;
+                }
+                Cache::put($cacheKey, $timerState, 86400);
+            }
         }
 
         if ($timerState['is_running'] && $timerState['started_at']) {
-            $elapsed = time() - $timerState['started_at'];
+            $elapsed = microtime(true) - $timerState['started_at'];
             $remaining = max(0, $timerState['remaining_seconds'] - $elapsed);
             if ($remaining <= 0) {
                 $timerState['is_running'] = false;
@@ -530,10 +537,13 @@ class LiveScoreController extends Controller
         $modelClass = $cfg['model'] ?? null;
         $record = $modelClass ? $modelClass::find($id) : null;
         $isScored = ($record && floatval($record->total ?? 0) > 0);
+
+        // Selalu hitung total_seconds dari config (bukan dari cache lama yang bisa stale)
+        $defaultTimer = $cfg['timer'] ?? '00:05:00';
+        $parts = explode(':', $defaultTimer);
+        $totalSeconds = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
+
         if (!$timerState) {
-            $defaultTimer = $cfg['timer'] ?? '00:05:00';
-            $parts = explode(':', $defaultTimer);
-            $totalSeconds = count($parts) === 3 ? ((int)$parts[0] * 3600 + (int)$parts[1] * 60 + (int)$parts[2]) : (count($parts) === 2 ? ((int)$parts[0] * 60 + (int)$parts[1]) : 300);
             $remainingSeconds = $isScored ? 0 : $totalSeconds;
             $timerState = [
                 'total_seconds' => $totalSeconds,
@@ -541,6 +551,14 @@ class LiveScoreController extends Controller
                 'is_running' => false,
                 'started_at' => null,
             ];
+            Cache::put($cacheKey, $timerState, 86400);
+        } elseif ($timerState['total_seconds'] !== $totalSeconds) {
+            // Config cabang berubah (misal 5 menit → 7 menit), update cache
+            $timerState['total_seconds'] = $totalSeconds;
+            // Jika remaining lebih besar dari total baru, clamp
+            if ($timerState['remaining_seconds'] > $totalSeconds) {
+                $timerState['remaining_seconds'] = $totalSeconds;
+            }
             Cache::put($cacheKey, $timerState, 86400);
         }
 
@@ -572,7 +590,7 @@ class LiveScoreController extends Controller
             } elseif ($timerState['remaining_seconds'] <= 0) {
                 $timerState['remaining_seconds'] = $timerState['total_seconds'];
             }
-            $timerState['started_at'] = time();
+            $timerState['started_at'] = microtime(true); // presisi millisecond
             $timerState['is_running'] = true;
             $timerState['is_reset_ready'] = false;
             Cache::put($cacheKey, $timerState, 86400);
@@ -581,7 +599,7 @@ class LiveScoreController extends Controller
             if ($reqRemaining !== null && is_numeric($reqRemaining)) {
                 $timerState['remaining_seconds'] = max(0, (int)$reqRemaining);
             } elseif ($timerState['is_running'] && !empty($timerState['started_at'])) {
-                $elapsed = time() - $timerState['started_at'];
+                $elapsed = microtime(true) - $timerState['started_at'];
                 $timerState['remaining_seconds'] = max(0, $timerState['remaining_seconds'] - $elapsed);
             }
             $timerState['is_running'] = false;
@@ -597,8 +615,8 @@ class LiveScoreController extends Controller
 
         $calcRemaining = (int)$timerState['remaining_seconds'];
         if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
-            $elapsed = time() - $timerState['started_at'];
-            $calcRemaining = max(0, $calcRemaining - $elapsed);
+            $elapsed = microtime(true) - $timerState['started_at'];
+            $calcRemaining = max(0, (int)($timerState['remaining_seconds'] - $elapsed));
         }
 
         return new \Illuminate\Http\JsonResponse([
