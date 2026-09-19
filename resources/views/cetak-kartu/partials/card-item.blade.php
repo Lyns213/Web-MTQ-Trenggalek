@@ -14,14 +14,16 @@
         </div>
     @endif
 
-    <!-- Pasfoto inside the photo frame -->
-    <div class="photo-wrap">
-        @if(!empty($item['photo_base64']))
-            <img src="{{ $item['photo_base64'] }}" class="photo-img">
-        @else
-            <div class="photo-ph">&#128100;</div>
-        @endif
-    </div>
+    @if($role === 'peserta' || !empty($item['photo_base64']))
+        <!-- Pasfoto inside the photo frame -->
+        <div class="photo-wrap">
+            @if(!empty($item['photo_base64']))
+                <img src="{{ $item['photo_base64'] }}" class="photo-img">
+            @else
+                <div class="photo-ph">&#128100;</div>
+            @endif
+        </div>
+    @endif
 
     @if($role === 'peserta')
         <!-- Nomor Peserta -->
@@ -36,7 +38,7 @@
     @else
         <!-- Nama for Dewan Hakim / Panitera / Panitia -->
         <div class="name-wrap-official">
-            <span class="name-text">{{ $item['nama'] ?? '-' }}</span>
+            <span class="name-text-official">{{ $item['nama'] ?? '-' }}</span>
         </div>
     @endif
 </div>

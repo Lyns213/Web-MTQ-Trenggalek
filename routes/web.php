@@ -77,6 +77,8 @@ Route::get("/live-tartil/{id?}", function($id = null) {
 Route::middleware(['web', 'auth'])->prefix('admin/cetak-kartu')->name('admin.cetak-kartu.')->group(function () {
     Route::get('/peserta/{id}', [CetakKartuPesertaController::class, 'single'])->name('peserta.single');
     Route::get('/peserta-bulk', [CetakKartuPesertaController::class, 'bulk'])->name('peserta.bulk');
+    Route::get('/official/{id}', [CetakKartuPesertaController::class, 'singleOfficial'])->name('official.single');
+    Route::get('/official-bulk', [CetakKartuPesertaController::class, 'bulkOfficial'])->name('official.bulk');
     Route::post('/dewan-hakim/download', [CetakKartuPesertaController::class, 'downloadDewanHakim'])->name('dewan-hakim.download');
     Route::post('/panitera/download', [CetakKartuPesertaController::class, 'downloadPanitera'])->name('panitera.download');
     Route::post('/panitia/download', [CetakKartuPesertaController::class, 'downloadPanitia'])->name('panitia.download');
