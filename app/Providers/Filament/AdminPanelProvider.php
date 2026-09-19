@@ -18,7 +18,9 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Filament\Enums\ThemeMode;
+use Filament\View\PanelsRenderHook;
 use App\Http\Middleware\SetDefaultTahun;
+use App\Filament\Auth\LoginAdmin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -28,7 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(LoginAdmin::class)
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -71,6 +73,14 @@ class AdminPanelProvider extends PanelProvider
             ->defaultThemeMode(ThemeMode::Light)
             ->favicon(asset('images/logotgxmini.png'))
                         ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn () => view('filament.admin.custom-styles')
+            )
+            ->renderHook(
+                PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
+                fn () => view('filament.admin.auth.footer')
+            )
+            ->renderHook(
                 "panels::global-search.before",
                 fn () => view("filament.plugins.tahun-filter-blade")
             )
