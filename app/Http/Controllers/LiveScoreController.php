@@ -434,7 +434,7 @@ class LiveScoreController extends Controller
 
         if ($timerState['is_running'] && $timerState['started_at']) {
             $elapsed = microtime(true) - $timerState['started_at'];
-            $remaining = max(0, $timerState['remaining_seconds'] - $elapsed);
+            $remaining = max(0, (int)floor($timerState['remaining_seconds'] - $elapsed));
             if ($remaining <= 0) {
                 $timerState['is_running'] = false;
                 $timerState['remaining_seconds'] = 0;
@@ -442,7 +442,7 @@ class LiveScoreController extends Controller
                 Cache::put($cacheKey, $timerState, 86400);
             }
         } else {
-            $remaining = $timerState['remaining_seconds'];
+            $remaining = (int)$timerState['remaining_seconds'];
         }
         $m = floor($remaining / 60);
         $s = $remaining % 60;
@@ -616,7 +616,7 @@ class LiveScoreController extends Controller
         $calcRemaining = (int)$timerState['remaining_seconds'];
         if (!empty($timerState['is_running']) && !empty($timerState['started_at'])) {
             $elapsed = microtime(true) - $timerState['started_at'];
-            $calcRemaining = max(0, (int)($timerState['remaining_seconds'] - $elapsed));
+            $calcRemaining = max(0, (int)floor($timerState['remaining_seconds'] - $elapsed));
         }
 
         return new \Illuminate\Http\JsonResponse([

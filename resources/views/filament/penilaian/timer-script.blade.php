@@ -302,9 +302,10 @@ tr.timer-active-row.timer-phase-red > td:last-child {
     }
 
     function formatTime(seconds, format) {
+        seconds = Math.floor(seconds);
         var h = Math.floor(seconds / 3600);
         var m = Math.floor((seconds % 3600) / 60);
-        var s = seconds % 60;
+        var s = Math.floor(seconds % 60);
         var pad = function(n) { return n < 10 ? '0' + n : n; };
         if (format === 'hms') {
             return pad(h) + ':' + pad(m) + ':' + pad(s);

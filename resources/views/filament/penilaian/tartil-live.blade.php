@@ -1478,6 +1478,7 @@ window.addEventListener('resize', fitStage);
 fitStage();
 
 function fmtTime(s) {
+    s = Math.floor(s);
     var m = Math.floor(s / 60);
     var sec = s % 60;
     return (m < 10 ? '0' + m : m) + ':' + (sec < 10 ? '0' + sec : sec);
